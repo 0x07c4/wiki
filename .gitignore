@@ -1,0 +1,32 @@
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Editor swap and temp files
+*~
+*.swp
+*.swo
+*.tmp
+*.bak
+
+# Local environment
+.env
+.env.*
+
+# Obsidian local workspace state
+.obsidian/workspace*.json
+.obsidian/workspaces.json
+.obsidian/cache
+
+# Search indexes and local tooling caches
+.qmd/
+.cache/
+
+# Generated exports and attachments that should not be committed by default
+exports/
+tmp/
+
+# Python / Node incidental artifacts from helper tooling
+__pycache__/
+*.pyc
+node_modules/
