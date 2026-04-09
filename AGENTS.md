@@ -21,6 +21,12 @@ The LLM is responsible for:
 - updating concept, entity, and synthesis pages
 - keeping the index and log current
 
+## Operational Aids
+
+- `templates/` contains starter structures for source, concept, entity, and synthesis pages
+- `playbooks/ingest-checklist.md` is the default ingest runbook
+- `playbooks/lint-checklist.md` is the default lint runbook
+
 ## Directory Map
 
 - `raw/inbox/`: newly dropped sources that have not been ingested yet
@@ -46,6 +52,7 @@ The LLM is responsible for:
 8. Do not write back query results as durable wiki content without explicit user confirmation.
 9. Default to one-source-at-a-time ingest unless the user asks for batching.
 10. Keep pages concise, structured, and easy to diff.
+11. Prefer adapting a file from `templates/` over inventing page structure from scratch.
 
 ## Page Conventions
 
@@ -79,6 +86,8 @@ When ingesting a new source:
 7. Append one entry to `wiki/log.md`.
 8. Show the user which wiki pages changed and why.
 
+Use `playbooks/ingest-checklist.md` as the default execution checklist.
+
 ## Workflow: Query
 
 When answering a question:
@@ -100,6 +109,8 @@ During a lint pass, look for:
 - missing cross-references
 - source pages that do not propagate into the rest of the wiki
 - synthesis pages that no longer reflect the evidence
+
+Use `playbooks/lint-checklist.md` as the default execution checklist.
 
 For each issue, either:
 
