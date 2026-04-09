@@ -1,133 +1,128 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
-import os
-import re
 import shutil
+import unicodedata
+from datetime import date
+from pathlib import Path
 
-from .linting import parse_frontmatter
-
-
-SOURCE_TEMPLATE = """---
-page_type: source
-status: draft
-last_updated: {last_updated}
-source_count: 1
-source_path: {source_path}
----
-
-# Source: {title}
-
-## Summary
-
-One short paragraph explaining what this source says and why it matters.
-
-## Key Claims
-
-- claim 1
-- claim 2
-- claim 3
-
-## Evidence Notes
-
-- evidence, examples, or data points worth preserving
-
-## Related Pages
-
-- [Concept](../concepts/example-concept.md)
-- [Entity](../entities/example-entity.md)
-- [Synthesis](../synthesis/example-question.md)
-
-## Open Questions
-
-- what remains unclear?
-- what should be checked against other sources?
-
-## Citations
-
-- [{raw_name}]({raw_source_rel})
-"""
+from llm_wiki.indexing import extract_title, parse_frontmatter
 
 
-@dataclass(frozen=True)
-class IngestInitResult:
-    source_name: str
-    canonical_source_path: Path
-    draft_page_path: Path
-    title: str
-    created_source_copy: bool
-    created_draft: bool
-
-
-def ingest_init(repo_root: Path, source_file: Path, overwrite: bool = False) -> IngestInitResult:
-    repo_root = repo_root.resolve()
-    source_file = _resolve_input_path(repo_root, source_file)
-    if not source_file.exists():
-        raise FileNotFoundError(source_file)
-
-    source_name = _slugify(source_file.stem) + source_file.suffix.lower()
-    canonical_source_path = repo_root / "raw" / "sources" / source_name
-    draft_page_path = repo_root / "wiki" / "sources" / f"{_slugify(source_file.stem)}.md"
-
-    created_source_copy = False
-    if source_file.resolve() != canonical_source_path.resolve():
-        canonical_source_path.parent.mkdir(parents=True, exist_ok=True)
-        if canonical_source_path.exists() and not overwrite:
-            raise FileExistsError(canonical_source_path)
-        shutil.copyfile(source_file, canonical_source_path)
-        created_source_copy = True
-
-    title = _derive_title(source_file, fallback=source_file.stem)
-    draft_page_path.parent.mkdir(parents=True, exist_ok=True)
-    if draft_page_path.exists() and not overwrite:
-        raise FileExistsError(draft_page_path)
-
-    rel_source_path = Path(os.path.relpath(canonical_source_path, draft_page_path.parent))
-    draft_text = SOURCE_TEMPLATE.format(
-        last_updated=_today(),
-        source_path=rel_source_path.as_posix(),
-        title=title,
-        raw_name=canonical_source_path.name,
-        raw_source_rel=rel_source_path.as_posix(),
-    )
-    draft_page_path.write_text(draft_text, encoding="utf-8")
-
-    return IngestInitResult(
-        source_name=source_file.name,
-        canonical_source_path=canonical_source_path,
-        draft_page_path=draft_page_path,
-        title=title,
-        created_source_copy=created_source_copy,
-        created_draft=True,
-    )
-
-
-def _resolve_input_path(repo_root: Path, source_file: Path) -> Path:
-    if source_file.is_absolute():
-        return source_file
-    candidate = (repo_root / source_file).resolve()
-    if candidate.exists():
-        return candidate
-    return source_file.resolve()
-
-
-def _derive_title(source_file: Path, fallback: str) -> str:
-    text = source_file.read_text(encoding="utf-8")
-    _, body = parse_frontmatter(text)
-    for line in body.splitlines():
-        match = re.match(r"^#\s+(.+?)\s*$", line.strip())
-        if match:
-            return match.group(1).strip()
-    return fallback.replace("-", " ").strip().title()
-
-
-def _slugify(value: str) -> str:
-    slug = re.sub(r"[^a-zA-Z0-9]+", "-", value).strip("-").lower()
+def slugify(value: str) -> str:
+    normalized = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+    output: list[str] = []
+    previous_dash = False
+    for char in normalized.lower():
+        if char.isalnum():
+            output.append(char)
+            previous_dash = False
+        else:
+            if not previous_dash:
+                output.append("-")
+                previous_dash = True
+    slug = "".join(output).strip("-")
     return slug or "source"
 
 
-def _today() -> str:
-    from datetime import date
+def read_markdown_title(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    _, body = parse_frontmatter(text)
+    return extract_title(body, path.stem.replace("-", " ").title())
 
-    return date.today().isoformat()
+
+def ensure_parent(path: Path) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+
+def relative_source_path(source_page_path: Path, raw_source_path: Path) -> str:
+    return raw_source_path.relative_to(source_page_path.parent, walk_up=True).as_posix()
+
+
+def canonicalize_source(repo_root: Path, source: Path, copy: bool) -> Path:
+    raw_inbox = repo_root / "raw" / "inbox"
+    raw_sources = repo_root / "raw" / "sources"
+    raw_sources.mkdir(parents=True, exist_ok=True)
+
+    resolved = source.resolve()
+    if resolved.is_relative_to(raw_sources.resolve()):
+        return resolved
+
+    destination = raw_sources / source.name
+    if destination.exists():
+        return destination.resolve()
+
+    if resolved.is_relative_to(raw_inbox.resolve()) and not copy:
+        shutil.move(str(resolved), str(destination))
+    else:
+        shutil.copy2(resolved, destination)
+    return destination.resolve()
+
+
+def source_page_content(title: str, source_page_path: Path, raw_source_path: Path) -> str:
+    today = date.today().isoformat()
+    source_rel = relative_source_path(source_page_path, raw_source_path)
+    return (
+        "---\n"
+        "page_type: source\n"
+        "status: draft\n"
+        f"last_updated: {today}\n"
+        "source_count: 1\n"
+        f"source_path: {source_rel}\n"
+        "---\n\n"
+        f"# Source: {title}\n\n"
+        "## Summary\n\n"
+        "TODO: summarize this source.\n\n"
+        "## Key Claims\n\n"
+        "- TODO\n\n"
+        "## Evidence Notes\n\n"
+        "- TODO\n\n"
+        "## Related Pages\n\n"
+        "- TODO\n\n"
+        "## Open Questions\n\n"
+        "- TODO\n\n"
+        "## Citations\n\n"
+        f"- [{raw_source_path.name}]({source_rel})\n"
+    )
+
+
+def append_log_entry(repo_root: Path, title: str, raw_source_path: Path, source_page_path: Path) -> None:
+    log_path = repo_root / "wiki" / "log.md"
+    today = date.today().isoformat()
+    entry = (
+        f"\n## [{today}] ingest-init | {title}\n\n"
+        f"- canonicalized raw source at `{raw_source_path.relative_to(repo_root).as_posix()}`\n"
+        f"- scaffolded source page at `{source_page_path.relative_to(repo_root).as_posix()}`\n"
+    )
+    existing = log_path.read_text(encoding="utf-8") if log_path.exists() else "# Log\n"
+    if entry.strip() not in existing:
+        log_path.write_text(existing.rstrip() + entry + "\n", encoding="utf-8")
+
+
+def ingest_init(repo_root: Path, source: str, copy: bool = False) -> tuple[Path, Path]:
+    source_path = (repo_root / source).resolve() if not Path(source).is_absolute() else Path(source).resolve()
+    if not source_path.exists():
+        raise FileNotFoundError(f"source does not exist: {source}")
+    if not source_path.is_file():
+        raise ValueError(f"source is not a file: {source}")
+
+    canonical_source = canonicalize_source(repo_root, source_path, copy=copy)
+    title = read_markdown_title(canonical_source)
+    slug = slugify(canonical_source.stem)
+
+    source_page_path = repo_root / "wiki" / "sources" / f"{slug}.md"
+    ensure_parent(source_page_path)
+
+    if not source_page_path.exists():
+        source_page_path.write_text(
+            source_page_content(title=title, source_page_path=source_page_path, raw_source_path=canonical_source),
+            encoding="utf-8",
+        )
+    append_log_entry(repo_root, title=title, raw_source_path=canonical_source, source_page_path=source_page_path)
+    return canonical_source, source_page_path
+
+
+def ingest_init_command(repo_root: Path, source: str, copy: bool = False) -> int:
+    canonical_source, source_page = ingest_init(repo_root, source=source, copy=copy)
+    print(f"raw source: {canonical_source.relative_to(repo_root).as_posix()}")
+    print(f"source page: {source_page.relative_to(repo_root).as_posix()}")
+    return 0

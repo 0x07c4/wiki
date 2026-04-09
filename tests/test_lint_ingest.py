@@ -1,87 +1,73 @@
 from __future__ import annotations
 
-from pathlib import Path
-from tempfile import TemporaryDirectory
-import sys
+import tempfile
 import unittest
+from pathlib import Path
 
+import sys
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from llm_wiki.ingest import ingest_init
-from llm_wiki.linting import lint_wiki
+from llm_wiki.linting import collect_findings
+
+
+def write(path: Path, content: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(content, encoding="utf-8")
 
 
 class LintAndIngestTests(unittest.TestCase):
-    def test_lint_finds_frontmatter_links_orphans_source_path_and_index_drift(self) -> None:
-        with TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            (repo / "wiki" / "sources").mkdir(parents=True)
-            (repo / "wiki" / "concepts").mkdir(parents=True)
-            (repo / "wiki" / "entities").mkdir(parents=True)
-            (repo / "wiki" / "synthesis").mkdir(parents=True)
+    def setUp(self) -> None:
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.repo_root = Path(self.temp_dir.name)
+        write(
+            self.repo_root / "wiki" / "overview.md",
+            """---
+page_type: overview
+status: active
+last_updated: 2026-04-10
+---
 
-            (repo / "raw" / "sources").mkdir(parents=True)
-            (repo / "raw" / "sources" / "seed.md").write_text("# Seed\n", encoding="utf-8")
+# Overview
 
-            (repo / "wiki" / "index.md").write_text(
-                "# Index\n\n## Sources\n\n- [seed](sources/seed.md): seed\n",
-                encoding="utf-8",
-            )
-            (repo / "wiki" / "log.md").write_text("# Log\n", encoding="utf-8")
-            (repo / "wiki" / "overview.md").write_text(
-                "---\npage_type: overview\nstatus: seed\nlast_updated: 2026-04-10\nsource_count: 1\n---\n\n# Overview\n\n[Missing](concepts/missing.md)\n",
-                encoding="utf-8",
-            )
-            (repo / "wiki" / "sources" / "seed.md").write_text(
-                "---\npage_type: source\nstatus: ingested\nlast_updated: 2026-04-10\nsource_count: 1\nsource_path: ../../raw/sources/seed.md\n---\n\n# Seed\n",
-                encoding="utf-8",
-            )
-            (repo / "wiki" / "sources" / "broken-source.md").write_text(
-                "---\npage_type: source\nstatus: draft\nlast_updated: 2026-04-10\nsource_count: 1\n---\n\n# Broken Source\n",
-                encoding="utf-8",
-            )
-            (repo / "wiki" / "concepts" / "orphan.md").write_text(
-                "---\npage_type: concept\nstatus: draft\nlast_updated: 2026-04-10\nsource_count: 0\n---\n\n# Orphan\n",
-                encoding="utf-8",
-            )
-            (repo / "wiki" / "entities" / "broken.md").write_text(
-                "---\npage_type: entity\nstatus: draft\nlast_updated: 2026-04-10\n---\n\n# Broken\n",
-                encoding="utf-8",
-            )
+[Concept](concepts/topic.md)
+""",
+        )
+        write(self.repo_root / "wiki" / "index.md", "# stale index\n")
+        write(self.repo_root / "wiki" / "log.md", "# Log\n")
+        write(
+            self.repo_root / "wiki" / "concepts" / "topic.md",
+            """---
+page_type: concept
+status: active
+last_updated: 2026-04-10
+---
 
-            issues = lint_wiki(repo)
+# Topic
 
-            self.assertTrue(any(issue.code == "broken-link" and issue.path == "wiki/overview.md" for issue in issues))
-            self.assertTrue(any(issue.code == "source-page-missing-source-path" and issue.path == "wiki/sources/broken-source.md" for issue in issues))
-            self.assertTrue(any(issue.code == "frontmatter-missing-keys" and issue.path == "wiki/entities/broken.md" for issue in issues))
-            self.assertTrue(any(issue.code == "orphan-page" and issue.path == "wiki/concepts/orphan.md" for issue in issues))
-            self.assertTrue(any(issue.code == "index-missing-page" and issue.detail == "wiki/overview.md" for issue in issues))
-            self.assertTrue(any(issue.code == "index-missing-page" and issue.detail == "wiki/sources/broken-source.md" for issue in issues))
-            self.assertTrue(any(issue.code == "index-missing-page" and issue.detail == "wiki/concepts/orphan.md" for issue in issues))
-            self.assertTrue(any(issue.code == "index-missing-page" and issue.detail == "wiki/entities/broken.md" for issue in issues))
+This concept points to a [missing page](missing.md).
+""",
+        )
+        write(self.repo_root / "raw" / "inbox" / "article.md", "# Article Title\n\nBody.\n")
 
-    def test_ingest_init_canonicalizes_inbox_source_and_writes_draft(self) -> None:
-        with TemporaryDirectory() as tmp:
-            repo = Path(tmp)
-            inbox = repo / "raw" / "inbox"
-            inbox.mkdir(parents=True)
-            (repo / "raw" / "sources").mkdir(parents=True)
-            (repo / "wiki" / "sources").mkdir(parents=True)
+    def tearDown(self) -> None:
+        self.temp_dir.cleanup()
 
-            source_file = inbox / "My Article.md"
-            source_file.write_text("# My Article\n\nBody.\n", encoding="utf-8")
+    def test_lint_reports_broken_link_and_index_drift(self) -> None:
+        findings = collect_findings(self.repo_root)
+        codes = {finding.code for finding in findings}
+        self.assertIn("broken-link", codes)
+        self.assertIn("index-drift", codes)
 
-            result = ingest_init(repo, source_file)
-
-            self.assertEqual(result.canonical_source_path, repo / "raw" / "sources" / "my-article.md")
-            self.assertEqual(result.draft_page_path, repo / "wiki" / "sources" / "my-article.md")
-            self.assertEqual(result.canonical_source_path.read_text(encoding="utf-8"), source_file.read_text(encoding="utf-8"))
-            draft = result.draft_page_path.read_text(encoding="utf-8")
-            self.assertIn("page_type: source", draft)
-            self.assertIn("source_path: ../../raw/sources/my-article.md", draft)
-            self.assertIn("# Source: My Article", draft)
+    def test_ingest_init_creates_raw_source_copy_and_source_page(self) -> None:
+        raw_source, source_page = ingest_init(self.repo_root, "raw/inbox/article.md", copy=True)
+        self.assertTrue(raw_source.exists())
+        self.assertTrue(source_page.exists())
+        page_text = source_page.read_text(encoding="utf-8")
+        self.assertIn("source_path: ../../raw/sources/article.md", page_text)
+        self.assertIn("# Source: Article Title", page_text)
+        self.assertTrue((self.repo_root / "wiki" / "log.md").read_text(encoding="utf-8").count("ingest-init") >= 1)
 
 
 if __name__ == "__main__":

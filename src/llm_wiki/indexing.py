@@ -1,314 +1,274 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import date
-from pathlib import Path
 import re
-from typing import Any
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Iterable
 
-FRONTMATTER_BOUNDARY = "---"
-RELATIVE_LINK_RE = re.compile(r"(?<!\!)\[[^\]]+\]\(([^)]+)\)")
-HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*$")
-TOKEN_RE = re.compile(r"[A-Za-z0-9_\u4e00-\u9fff]+", re.UNICODE)
 
-DEFAULT_INDEX_NAME = "index.md"
-DEFAULT_CATEGORY_ORDER = [
-    "Entry Points",
-    "Sources",
-    "Concepts",
-    "Entities",
-    "Synthesis",
-    "Other Pages",
-]
+MARKDOWN_LINK_RE = re.compile(r"\[([^\]]+)\]\(([^)]+)\)")
+FRONTMATTER_RE = re.compile(r"\A---\n(.*?)\n---\n?", re.DOTALL)
+TOKEN_RE = re.compile(r"[a-z0-9]+")
+
+ENTRY_POINT_NAMES = {"overview.md", "log.md", "index.md"}
 
 
 @dataclass(slots=True)
-class PageRecord:
+class Page:
+    repo_root: Path
     path: Path
-    rel_path: str
+    wiki_rel_path: Path
+    page_type: str
     title: str
     summary: str
-    frontmatter: dict[str, Any]
-    links: list[str]
     body: str
+    frontmatter: dict[str, str]
+    links: list[Path]
 
     @property
-    def category(self) -> str:
-        parts = Path(self.rel_path).parts
-        if Path(self.rel_path).name in {"overview.md", "log.md"}:
-            return "Entry Points"
-        if len(parts) >= 2:
-            head = parts[0]
-            return {
-                "sources": "Sources",
-                "concepts": "Concepts",
-                "entities": "Entities",
-                "synthesis": "Synthesis",
-            }.get(head, "Other Pages")
-        return "Other Pages"
+    def stem(self) -> str:
+        return self.path.stem
 
     @property
-    def metadata_bits(self) -> list[str]:
-        bits: list[str] = []
-        page_type = self.frontmatter.get("page_type")
-        status = self.frontmatter.get("status")
-        source_count = self.frontmatter.get("source_count")
-        if page_type:
-            bits.append(str(page_type))
-        if status:
-            bits.append(str(status))
-        if source_count is not None:
-            bits.append(f"sources: {source_count}")
-        return bits
+    def display_path(self) -> str:
+        return self.path.relative_to(self.repo_root).as_posix()
+
+    @property
+    def index_link(self) -> str:
+        return self.wiki_rel_path.as_posix()
 
 
-def scan_markdown_pages(root: str | Path, *, index_name: str = DEFAULT_INDEX_NAME) -> list[PageRecord]:
-    root_path = Path(root)
-    pages: list[PageRecord] = []
-    for path in sorted(root_path.rglob("*.md")):
-        if path.name == index_name:
+def parse_frontmatter(text: str) -> tuple[dict[str, str], str]:
+    match = FRONTMATTER_RE.match(text)
+    if not match:
+        return {}, text
+
+    frontmatter: dict[str, str] = {}
+    for line in match.group(1).splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or ":" not in stripped:
             continue
-        pages.append(parse_markdown_page(path, root_path=root_path))
-    return pages
+        key, value = stripped.split(":", 1)
+        frontmatter[key.strip()] = value.strip().strip('"').strip("'")
+
+    return frontmatter, text[match.end() :]
 
 
-def parse_markdown_page(path: str | Path, *, root_path: str | Path | None = None) -> PageRecord:
-    file_path = Path(path)
-    root = Path(root_path) if root_path is not None else file_path.parent
-    text = file_path.read_text(encoding="utf-8")
-    frontmatter, body = split_frontmatter(text)
-    title = extract_title(body) or file_path.stem.replace("-", " ").replace("_", " ").title()
-    summary = extract_summary(body)
-    links = extract_relative_links(body)
-    rel_path = str(file_path.relative_to(root))
-    return PageRecord(
-        path=file_path,
-        rel_path=rel_path,
-        title=title,
-        summary=summary,
-        frontmatter=frontmatter,
-        links=links,
-        body=body,
-    )
-
-
-def split_frontmatter(text: str) -> tuple[dict[str, Any], str]:
-    stripped = text.lstrip("\ufeff")
-    lines = stripped.splitlines()
-    if not lines or lines[0].strip() != FRONTMATTER_BOUNDARY:
-        return {}, stripped
-
-    end_index = None
-    for idx in range(1, len(lines)):
-        if lines[idx].strip() == FRONTMATTER_BOUNDARY:
-            end_index = idx
-            break
-    if end_index is None:
-        return {}, stripped
-
-    frontmatter_lines = lines[1:end_index]
-    body = "\n".join(lines[end_index + 1 :])
-    return parse_frontmatter_lines(frontmatter_lines), body
-
-
-def parse_frontmatter_lines(lines: list[str]) -> dict[str, Any]:
-    data: dict[str, Any] = {}
-    current_key: str | None = None
-    current_list: list[Any] | None = None
-
-    for raw_line in lines:
-        line = raw_line.rstrip()
-        if not line.strip():
-            continue
-        stripped = line.lstrip()
-        if stripped.startswith("- ") and current_key and current_list is not None:
-            current_list.append(parse_scalar(stripped[2:].strip()))
-            continue
-        if ":" not in line:
-            continue
-
-        key, value = line.split(":", 1)
-        key = key.strip()
-        value = value.strip()
-
-        if value == "":
-            current_key = key
-            current_list = []
-            data[key] = current_list
-            continue
-
-        parsed_value = parse_scalar(value)
-        data[key] = parsed_value
-        current_key = None
-        current_list = None
-
-    return data
-
-
-def parse_scalar(value: str) -> Any:
-    if value.startswith(("'", '"')) and value.endswith(("'", '"')) and len(value) >= 2:
-        return value[1:-1]
-    lowered = value.lower()
-    if lowered == "true":
-        return True
-    if lowered == "false":
-        return False
-    if lowered in {"null", "none", "~"}:
-        return None
-    if re.fullmatch(r"-?\d+", value):
-        return int(value)
-    if re.fullmatch(r"-?\d+\.\d+", value):
-        return float(value)
-    return value
-
-
-def extract_title(body: str) -> str:
+def extract_title(body: str, fallback: str) -> str:
     for line in body.splitlines():
-        match = HEADING_RE.match(line)
-        if match:
-            return match.group(1).strip()
-    return ""
+        stripped = line.strip()
+        if stripped.startswith("# "):
+            return stripped[2:].strip()
+    return fallback
 
 
 def extract_summary(body: str) -> str:
     lines = body.splitlines()
-    if not lines:
-        return ""
-
-    preferred_headings = {"summary", "definition", "short answer", "role"}
-    current_section: str | None = None
-    block: list[str] = []
-
-    def flush_block() -> str:
-        nonlocal block
-        text = "\n".join(block).strip()
-        block = []
-        return collapse_paragraph(text)
-
-    for line in lines:
-        heading = HEADING_RE.match(line)
-        if heading:
-            if current_section in preferred_headings:
-                summary = flush_block()
-                if summary:
-                    return summary
-            current_section = heading.group(1).strip().lower()
-            continue
-
-        if current_section in preferred_headings:
-            if not line.strip():
-                summary = flush_block()
-                if summary:
-                    return summary
-                continue
-            if line.lstrip().startswith(("-", "*", ">", "|")):
-                block.append(line.strip())
-                continue
-            block.append(line.strip())
-
-    if current_section in preferred_headings:
-        summary = flush_block()
-        if summary:
-            return summary
-
-    # Fallback: first plain paragraph after the title.
-    paragraphs = split_paragraphs(body)
-    for paragraph in paragraphs:
-        if not paragraph.lstrip().startswith("#"):
-            return collapse_paragraph(paragraph)
-    return ""
-
-
-def split_paragraphs(text: str) -> list[str]:
-    paragraphs: list[str] = []
+    blocks: list[str] = []
     current: list[str] = []
-    for line in text.splitlines():
-        if not line.strip():
-            if current:
-                paragraphs.append("\n".join(current))
-                current = []
+    in_code_block = False
+
+    def flush() -> None:
+        if current:
+            blocks.append(" ".join(item.strip() for item in current if item.strip()))
+            current.clear()
+
+    for raw_line in lines:
+        line = raw_line.rstrip()
+        stripped = line.strip()
+
+        if stripped.startswith("```"):
+            in_code_block = not in_code_block
+            flush()
             continue
-        current.append(line)
-    if current:
-        paragraphs.append("\n".join(current))
-    return paragraphs
-
-
-def collapse_paragraph(text: str) -> str:
-    normalized = " ".join(part.strip() for part in text.splitlines()).strip()
-    return normalized
-
-
-def extract_relative_links(body: str) -> list[str]:
-    links: list[str] = []
-    for match in RELATIVE_LINK_RE.finditer(body):
-        target = match.group(1).strip()
-        if is_external_link(target):
+        if in_code_block:
             continue
-        if target not in links:
-            links.append(target)
+        if not stripped:
+            flush()
+            continue
+        if stripped.startswith("#"):
+            flush()
+            continue
+        if stripped.startswith(("- ", "* ", "1. ", "2. ", "3. ", ">")):
+            flush()
+            continue
+
+        current.append(stripped)
+
+    flush()
+    return blocks[0] if blocks else ""
+
+
+def extract_links(body: str, base_path: Path) -> list[Path]:
+    links: list[Path] = []
+    for _, target in MARKDOWN_LINK_RE.findall(body):
+        cleaned = target.strip()
+        if not cleaned or cleaned.startswith(("http://", "https://", "mailto:", "#")):
+            continue
+        target_without_anchor = cleaned.split("#", 1)[0]
+        if not target_without_anchor:
+            continue
+        resolved = (base_path.parent / target_without_anchor).resolve()
+        links.append(resolved)
     return links
 
 
-def is_external_link(target: str) -> bool:
-    lowered = target.lower()
-    return (
-        lowered.startswith(("http://", "https://", "mailto:", "ftp://"))
-        or lowered.startswith("#")
-        or lowered.startswith("/")
-        or lowered.startswith("file:")
+def infer_page_type(path: Path, frontmatter: dict[str, str]) -> str:
+    page_type = frontmatter.get("page_type")
+    if page_type:
+        return page_type
+
+    parent = path.parent.name
+    if parent in {"sources", "concepts", "entities", "synthesis"}:
+        return parent[:-1] if parent.endswith("s") else parent
+    if path.name == "overview.md":
+        return "overview"
+    if path.name == "log.md":
+        return "log"
+    if path.name == "index.md":
+        return "index"
+    return "other"
+
+
+def load_page(repo_root: Path, path: Path) -> Page:
+    text = path.read_text(encoding="utf-8")
+    frontmatter, body = parse_frontmatter(text)
+    title = extract_title(body, path.stem.replace("-", " ").title())
+    summary = extract_summary(body)
+    wiki_rel_path = path.relative_to(repo_root / "wiki")
+    return Page(
+        repo_root=repo_root,
+        path=path.resolve(),
+        wiki_rel_path=wiki_rel_path,
+        page_type=infer_page_type(path, frontmatter),
+        title=title,
+        summary=summary,
+        body=body,
+        frontmatter=frontmatter,
+        links=extract_links(body, path.resolve()),
     )
 
 
-def build_index_markdown(
-    root: str | Path,
-    *,
-    index_name: str = DEFAULT_INDEX_NAME,
-    updated: str | None = None,
-) -> str:
-    root_path = Path(root)
-    if updated is None:
-        updated = date.today().isoformat()
+def scan_wiki_pages(repo_root: Path) -> list[Page]:
+    wiki_root = repo_root / "wiki"
+    paths = sorted(path for path in wiki_root.rglob("*.md") if path.is_file())
+    return [load_page(repo_root, path) for path in paths]
 
-    pages = scan_markdown_pages(root_path, index_name=index_name)
+
+def summary_for_index(page: Page) -> str:
+    if page.summary:
+        return truncate_summary(page.summary)
+    if page.path.name == "log.md":
+        return "chronological record of ingests and durable writebacks"
+    if page.path.name == "index.md":
+        return "content-oriented catalog of wiki pages"
+    if page.path.name == "overview.md":
+        return "top-level summary of the wiki's current thesis and open questions"
+    return "no summary available yet"
+
+
+def truncate_summary(text: str, limit: int = 160) -> str:
+    if len(text) <= limit:
+        return text
+    return text[: limit - 3].rstrip() + "..."
+
+
+def display_name(page: Page) -> str:
+    if page.path.name in ENTRY_POINT_NAMES:
+        return page.path.stem
+    return page.path.stem
+
+
+def group_pages(pages: Iterable[Page]) -> dict[str, list[Page]]:
+    grouped: dict[str, list[Page]] = {
+        "Entry Points": [],
+        "Sources": [],
+        "Concepts": [],
+        "Entities": [],
+        "Synthesis": [],
+        "Other": [],
+    }
+
+    for page in pages:
+        if page.path.name in ENTRY_POINT_NAMES:
+            grouped["Entry Points"].append(page)
+            continue
+        match page.page_type:
+            case "source":
+                grouped["Sources"].append(page)
+            case "concept":
+                grouped["Concepts"].append(page)
+            case "entity":
+                grouped["Entities"].append(page)
+            case "synthesis":
+                grouped["Synthesis"].append(page)
+            case _:
+                grouped["Other"].append(page)
+
+    for value in grouped.values():
+        value.sort(key=lambda page: page.index_link)
+
+    return grouped
+
+
+def build_index_markdown(repo_root: Path) -> str:
+    pages = [page for page in scan_wiki_pages(repo_root) if page.path.name != "index.md"]
     grouped = group_pages(pages)
 
-    lines: list[str] = ["# Index", "", f"Updated: {updated}", ""]
-    for category in DEFAULT_CATEGORY_ORDER:
-        entries = grouped.get(category, [])
-        if not entries:
+    lines = ["# Index", "", f"Updated: {current_date_string()}", ""]
+    ordered_sections = ["Entry Points", "Sources", "Concepts", "Entities", "Synthesis", "Other"]
+
+    for section in ordered_sections:
+        section_pages = grouped[section]
+        if not section_pages:
             continue
-        lines.append(f"## {category}")
+        lines.append(f"## {section}")
         lines.append("")
-        for page in entries:
-            link = page.rel_path.replace("\\", "/")
-            summary = page.summary or "No summary available."
-            meta = format_metadata(page.metadata_bits)
-            suffix = f" [{meta}]" if meta else ""
-            lines.append(f"- [{page.title}]({link}): {summary}{suffix}")
+        for page in section_pages:
+            lines.append(
+                f"- [{display_name(page)}]({page.index_link}): {summary_for_index(page)}"
+            )
         lines.append("")
 
     return "\n".join(lines).rstrip() + "\n"
 
 
-def group_pages(pages: list[PageRecord]) -> dict[str, list[PageRecord]]:
-    grouped: dict[str, list[PageRecord]] = {category: [] for category in DEFAULT_CATEGORY_ORDER}
-    for page in pages:
-        grouped.setdefault(page.category, []).append(page)
+def current_date_string() -> str:
+    from datetime import date
 
-    for entries in grouped.values():
-        entries.sort(key=lambda item: item.rel_path)
-    return grouped
+    return date.today().isoformat()
 
 
-def format_metadata(bits: list[str]) -> str:
-    return ", ".join(bit for bit in bits if bit)
+def write_index(repo_root: Path) -> str:
+    content = build_index_markdown(repo_root)
+    index_path = repo_root / "wiki" / "index.md"
+    index_path.write_text(content, encoding="utf-8")
+    return content
 
 
-def collect_search_text(page: PageRecord) -> str:
-    frontmatter_text = " ".join(str(value) for value in page.frontmatter.values())
-    return "\n".join([page.title, page.summary, frontmatter_text, page.body])
+def reindex_command(repo_root: Path, check: bool = False, to_stdout: bool = False) -> int:
+    generated = build_index_markdown(repo_root)
+    index_path = repo_root / "wiki" / "index.md"
+    existing = index_path.read_text(encoding="utf-8") if index_path.exists() else ""
+
+    if to_stdout:
+        print(generated, end="")
+        return 0
+
+    if check:
+        if existing != generated:
+            print("wiki/index.md is out of date")
+            return 1
+        print("wiki/index.md is up to date")
+        return 0
+
+    if existing != generated:
+        index_path.write_text(generated, encoding="utf-8")
+        print(f"updated {index_path.relative_to(repo_root).as_posix()}")
+    else:
+        print("wiki/index.md already up to date")
+    return 0
 
 
-def tokenise(text: str) -> list[str]:
-    return [token.lower() for token in TOKEN_RE.findall(text)]
+def tokenize(text: str) -> list[str]:
+    return TOKEN_RE.findall(text.lower())

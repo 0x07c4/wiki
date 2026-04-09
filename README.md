@@ -59,3 +59,35 @@ This starter already includes a small seed wiki derived from [llm-wiki.md](llm-w
 - ingest them one at a time
 - tighten `AGENTS.md` when the workflow shows friction
 - add tooling only after the manual workflow is stable
+
+## CLI
+
+This repo now ships with a local CLI entrypoint:
+
+```bash
+python3 -m pip install -e .
+llm-wiki --help
+```
+
+Core commands in this repository:
+
+- `llm-wiki reindex`
+- `llm-wiki search <query>`
+- `llm-wiki lint`
+- `llm-wiki ingest-init <source>`
+
+The intent is pragmatic:
+
+- `reindex` keeps `wiki/index.md` generated from the actual wiki
+- `search` gives the LLM a cheap local discovery tool
+- `lint` catches structural drift before it compounds
+- `ingest-init` handles raw source canonicalization and source-page scaffolding
+
+Example usage:
+
+```bash
+llm-wiki reindex
+llm-wiki search "llm wiki"
+llm-wiki lint
+llm-wiki ingest-init raw/inbox/new-article.md
+```
