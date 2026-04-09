@@ -40,6 +40,15 @@ Links to the [LLM Wiki](concepts/llm-wiki.md) and [Source One](sources/source-on
         write(self.repo_root / "wiki" / "index.md", "# Index\n")
         write(self.repo_root / "wiki" / "log.md", "# Log\n")
         write(
+            self.repo_root / "wiki" / "index.md",
+            """# Index
+
+- [overview](overview.md)
+- [llm-wiki](concepts/llm-wiki.md)
+- [source-one](sources/source-one.md)
+""",
+        )
+        write(
             self.repo_root / "wiki" / "concepts" / "llm-wiki.md",
             """---
 page_type: concept
@@ -121,6 +130,8 @@ No inbound links yet.
         self.assertEqual(source.inbound, 2)
         self.assertIn(orphan, snapshot.orphans)
         self.assertEqual(snapshot.hubs[0].page.path.name, "llm-wiki.md")
+        index = snapshot.graph_nodes[self.repo_root / "wiki" / "index.md"]
+        self.assertEqual(index.outbound, 0)
 
     def test_renderers_include_summary_and_adjacency(self) -> None:
         snapshot = build_status_snapshot(self.repo_root)

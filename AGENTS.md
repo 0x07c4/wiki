@@ -26,6 +26,9 @@ The LLM is responsible for:
 - `templates/` contains starter structures for source, concept, entity, and synthesis pages
 - `playbooks/ingest-checklist.md` is the default ingest runbook
 - `playbooks/lint-checklist.md` is the default lint runbook
+- `llm-wiki search` is the cheap local discovery tool
+- `llm-wiki query` builds an LLM-ready markdown context bundle with traceable snippets
+- `llm-wiki status` and `llm-wiki graph` expose structural health and link topology
 
 ## Directory Map
 
@@ -94,9 +97,10 @@ When answering a question:
 
 1. Read `wiki/index.md` first.
 2. Open only the relevant wiki pages and raw sources.
-3. Answer from the maintained wiki, with citations where possible.
-4. If the answer produced a durable new artifact, propose a writeback target in `wiki/synthesis/`.
-5. Write the page only after the user confirms.
+3. Use `llm-wiki query "<question>"` when a fast context bundle would help scope the answer.
+4. Answer from the maintained wiki, with citations where possible.
+5. If the answer produced a durable new artifact, propose a writeback target in `wiki/synthesis/`.
+6. Write the page only after the user confirms.
 
 ## Workflow: Lint
 
@@ -111,6 +115,7 @@ During a lint pass, look for:
 - synthesis pages that no longer reflect the evidence
 
 Use `playbooks/lint-checklist.md` as the default execution checklist.
+Use `llm-wiki status` and `llm-wiki graph` when backlink and orphan structure matters.
 
 For each issue, either:
 

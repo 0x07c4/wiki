@@ -89,6 +89,7 @@ The seed note argues that persistent wikis outperform ad hoc RAG for repeated sy
 
         source_context = next(context for context in bundle.contexts if context.page.path.name == "seed.md")
         self.assertEqual(source_context.source_path, "../../raw/sources/seed.md")
+        self.assertIn("persistent wikis outperform ad hoc rag", source_context.snippets[0].text.lower())
 
     def test_markdown_bundle_is_llm_ready(self) -> None:
         markdown = build_query_context_markdown(self.repo_root, query="ad hoc rag", limit=2, snippets_per_page=2)

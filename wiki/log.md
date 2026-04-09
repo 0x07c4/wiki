@@ -23,3 +23,11 @@
 - added a local `llm-wiki` CLI for `reindex`, `search`, `lint`, and `ingest-init`
 - `wiki/index.md` can now be generated from the actual wiki instead of maintained by hand
 - added tests covering indexing, search, lint checks, and source scaffold creation
+
+## [2026-04-10] tooling | query and status commands added
+
+- added `llm-wiki query` to assemble markdown context bundles with snippets and trace paths
+- added `llm-wiki status` and `llm-wiki graph` for backlinks, hubs, orphan detection, and adjacency inspection
+- expanded tests to cover query context and graph/status summaries
+- tightened snippet selection to prefer evidence-bearing prose over navigation links
+- switched `ingest-init` to scaffold from `templates/source-page.md` and refresh `wiki/index.md`

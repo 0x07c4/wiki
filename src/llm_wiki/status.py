@@ -8,6 +8,7 @@ from llm_wiki.indexing import Page, scan_wiki_pages
 
 
 ENTRY_POINT_NAMES = {"overview.md", "index.md", "log.md"}
+STRUCTURAL_EDGE_EXCLUDED = {"index.md", "log.md"}
 IGNORED_RAW_FILENAMES = {"README.md"}
 
 
@@ -84,14 +85,17 @@ def scan_graph_nodes(wiki_pages: list[Page]) -> dict[Path, GraphNode]:
     for page in wiki_pages:
         node = nodes[page.path.resolve()]
         outbound_targets: list[str] = []
+        count_edges = page.path.name not in STRUCTURAL_EDGE_EXCLUDED
         for target in page.links:
             target_page = wiki_paths.get(target)
             if target_page is None:
                 continue
+            outbound_targets.append(target_page.display_path)
+            if not count_edges:
+                continue
             target_node = nodes[target_page.path.resolve()]
             target_node.inbound += 1
             node.outbound += 1
-            outbound_targets.append(target_page.display_path)
         node.outbound_targets = sorted(dict.fromkeys(outbound_targets))
 
     return nodes
@@ -172,4 +176,10 @@ def format_graph_adjacency(snapshot: StatusSnapshot) -> str:
 def status_command(repo_root: Path) -> int:
     snapshot = build_status_snapshot(repo_root)
     print(format_status_summary(snapshot), end="")
+    return 0
+
+
+def graph_command(repo_root: Path) -> int:
+    snapshot = build_status_snapshot(repo_root)
+    print(format_graph_adjacency(snapshot))
     return 0

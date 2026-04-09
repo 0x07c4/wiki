@@ -5,7 +5,7 @@ import unicodedata
 from datetime import date
 from pathlib import Path
 
-from llm_wiki.indexing import extract_title, parse_frontmatter
+from llm_wiki.indexing import extract_title, parse_frontmatter, write_index
 
 
 def slugify(value: str) -> str:
@@ -61,28 +61,55 @@ def canonicalize_source(repo_root: Path, source: Path, copy: bool) -> Path:
 def source_page_content(title: str, source_page_path: Path, raw_source_path: Path) -> str:
     today = date.today().isoformat()
     source_rel = relative_source_path(source_page_path, raw_source_path)
-    return (
-        "---\n"
-        "page_type: source\n"
-        "status: draft\n"
-        f"last_updated: {today}\n"
-        "source_count: 1\n"
-        f"source_path: {source_rel}\n"
-        "---\n\n"
-        f"# Source: {title}\n\n"
-        "## Summary\n\n"
-        "TODO: summarize this source.\n\n"
-        "## Key Claims\n\n"
-        "- TODO\n\n"
-        "## Evidence Notes\n\n"
-        "- TODO\n\n"
-        "## Related Pages\n\n"
-        "- TODO\n\n"
-        "## Open Questions\n\n"
-        "- TODO\n\n"
-        "## Citations\n\n"
-        f"- [{raw_source_path.name}]({source_rel})\n"
-    )
+    template_path = source_page_path.parents[2] / "templates" / "source-page.md"
+    if template_path.exists():
+        template = template_path.read_text(encoding="utf-8")
+    else:
+        template = (
+            "---\n"
+            "page_type: source\n"
+            "status: draft\n"
+            "last_updated: YYYY-MM-DD\n"
+            "source_count: 1\n"
+            "source_path: ../../raw/sources/example-source.md\n"
+            "---\n\n"
+            "# Source: Title\n\n"
+            "## Summary\n\n"
+            "TODO: summarize this source.\n\n"
+            "## Key Claims\n\n"
+            "- claim 1\n"
+            "- claim 2\n"
+            "- claim 3\n\n"
+            "## Evidence Notes\n\n"
+            "- evidence, examples, or data points worth preserving\n\n"
+            "## Related Pages\n\n"
+            "- [Concept](../concepts/example-concept.md)\n"
+            "- [Entity](../entities/example-entity.md)\n"
+            "- [Synthesis](../synthesis/example-question.md)\n\n"
+            "## Open Questions\n\n"
+            "- what remains unclear?\n"
+            "- what should be checked against other sources?\n\n"
+            "## Citations\n\n"
+            "- [example-source.md](../../raw/sources/example-source.md)\n"
+        )
+
+    replacements = {
+        "YYYY-MM-DD": today,
+        "example-source.md": raw_source_path.name,
+        "../../raw/sources/example-source.md": source_rel,
+        "# Source: Title": f"# Source: {title}",
+        "- [example-source.md](../../raw/sources/example-source.md)": f"- [{raw_source_path.name}]({source_rel})",
+        "One short paragraph explaining what this source says and why it matters.": "TODO: summarize this source.",
+        "- claim 1\n- claim 2\n- claim 3": "- TODO",
+        "- evidence, examples, or data points worth preserving": "- TODO",
+        "- [Concept](../concepts/example-concept.md)\n- [Entity](../entities/example-entity.md)\n- [Synthesis](../synthesis/example-question.md)": "- TODO",
+        "- what remains unclear?\n- what should be checked against other sources?": "- TODO",
+    }
+
+    content = template
+    for before, after in replacements.items():
+        content = content.replace(before, after)
+    return content
 
 
 def append_log_entry(repo_root: Path, title: str, raw_source_path: Path, source_page_path: Path) -> None:
@@ -118,6 +145,7 @@ def ingest_init(repo_root: Path, source: str, copy: bool = False) -> tuple[Path,
             encoding="utf-8",
         )
     append_log_entry(repo_root, title=title, raw_source_path=canonical_source, source_page_path=source_page_path)
+    write_index(repo_root)
     return canonical_source, source_page_path
 
 

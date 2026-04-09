@@ -50,6 +50,48 @@ This concept points to a [missing page](missing.md).
 """,
         )
         write(self.repo_root / "raw" / "inbox" / "article.md", "# Article Title\n\nBody.\n")
+        write(
+            self.repo_root / "templates" / "source-page.md",
+            """---
+page_type: source
+status: draft
+last_updated: YYYY-MM-DD
+source_count: 1
+source_path: ../../raw/sources/example-source.md
+---
+
+# Source: Title
+
+## Summary
+
+One short paragraph explaining what this source says and why it matters.
+
+## Key Claims
+
+- claim 1
+- claim 2
+- claim 3
+
+## Evidence Notes
+
+- evidence, examples, or data points worth preserving
+
+## Related Pages
+
+- [Concept](../concepts/example-concept.md)
+- [Entity](../entities/example-entity.md)
+- [Synthesis](../synthesis/example-question.md)
+
+## Open Questions
+
+- what remains unclear?
+- what should be checked against other sources?
+
+## Citations
+
+- [example-source.md](../../raw/sources/example-source.md)
+""",
+        )
 
     def tearDown(self) -> None:
         self.temp_dir.cleanup()
@@ -67,7 +109,9 @@ This concept points to a [missing page](missing.md).
         page_text = source_page.read_text(encoding="utf-8")
         self.assertIn("source_path: ../../raw/sources/article.md", page_text)
         self.assertIn("# Source: Article Title", page_text)
+        self.assertIn("- [article.md](../../raw/sources/article.md)", page_text)
         self.assertTrue((self.repo_root / "wiki" / "log.md").read_text(encoding="utf-8").count("ingest-init") >= 1)
+        self.assertIn("[article](sources/article.md)", (self.repo_root / "wiki" / "index.md").read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

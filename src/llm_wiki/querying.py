@@ -46,15 +46,33 @@ def _line_snippets(page: Page, query_tokens: list[str], radius: int = 1, limit: 
     scored_lines: list[tuple[int, int, str]] = []
 
     for index, line in enumerate(lines, start=1):
-        line_tokens = tokenize(line)
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith(("- [", "* [")):
+            continue
+        line_tokens = tokenize(stripped)
         match_count = sum(line_tokens.count(token) for token in query_tokens)
         if match_count == 0:
             continue
+        score = match_count * 10
+        if stripped.startswith("#"):
+            score -= 6
+        elif stripped.startswith(("- ", "* ")):
+            score -= 6
+        else:
+            score += 2
+        if "](" in stripped:
+            score -= 10
+        if len(line_tokens) >= 8:
+            score += 3
+        if any(punctuation in stripped for punctuation in (".", ":", ";")):
+            score += 2
         start = max(1, index - radius)
         end = min(len(lines), index + radius)
         context_lines = lines[start - 1 : end]
         snippet_text = "\n".join(context_lines).strip()
-        scored_lines.append((match_count, index, snippet_text))
+        scored_lines.append((score, index, snippet_text))
 
     scored_lines.sort(key=lambda item: (-item[0], item[1], item[2]))
     snippets: list[QuerySnippet] = []
@@ -126,3 +144,15 @@ def build_query_context_markdown(repo_root: Path, query: str, limit: int = 5, sn
     bundle = build_query_context(repo_root, query=query, limit=limit, snippets_per_page=snippets_per_page)
     return render_query_context_markdown(bundle)
 
+
+def query_command(repo_root: Path, query: str, limit: int = 5, snippets_per_page: int = 3) -> int:
+    print(
+        build_query_context_markdown(
+            repo_root,
+            query=query,
+            limit=limit,
+            snippets_per_page=snippets_per_page,
+        ),
+        end="",
+    )
+    return 0

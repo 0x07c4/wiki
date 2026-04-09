@@ -25,7 +25,23 @@ def build_parser() -> argparse.ArgumentParser:
     search.add_argument("query", help="Query string to search for.")
     search.add_argument("--limit", type=int, default=10, help="Maximum number of results to print.")
 
+    query = subparsers.add_parser(
+        "query",
+        help="Build an LLM-ready markdown context bundle for a question.",
+    )
+    query.add_argument("query", help="Question or prompt to gather context for.")
+    query.add_argument("--limit", type=int, default=5, help="Maximum number of wiki pages to include.")
+    query.add_argument(
+        "--snippets-per-page",
+        type=int,
+        default=3,
+        help="Maximum number of extracted snippets per page.",
+    )
+
     lint = subparsers.add_parser("lint", help="Run structural checks against the wiki.")
+
+    subparsers.add_parser("status", help="Show raw/wiki counts, hubs, backlinks, and orphans.")
+    subparsers.add_parser("graph", help="Print wiki link adjacency for local inspection.")
 
     ingest = subparsers.add_parser(
         "ingest-init",
@@ -57,10 +73,30 @@ def main(argv: list[str] | None = None) -> int:
 
         return search_command(repo_root=repo_root, query=args.query, limit=args.limit)
 
+    if args.command == "query":
+        from llm_wiki.querying import query_command
+
+        return query_command(
+            repo_root=repo_root,
+            query=args.query,
+            limit=args.limit,
+            snippets_per_page=args.snippets_per_page,
+        )
+
     if args.command == "lint":
         from llm_wiki.linting import lint_command
 
         return lint_command(repo_root=repo_root)
+
+    if args.command == "status":
+        from llm_wiki.status import status_command
+
+        return status_command(repo_root=repo_root)
+
+    if args.command == "graph":
+        from llm_wiki.status import graph_command
+
+        return graph_command(repo_root=repo_root)
 
     if args.command == "ingest-init":
         from llm_wiki.ingest import ingest_init_command

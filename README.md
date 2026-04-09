@@ -73,21 +73,30 @@ Core commands in this repository:
 
 - `llm-wiki reindex`
 - `llm-wiki search <query>`
+- `llm-wiki query <question>`
 - `llm-wiki lint`
 - `llm-wiki ingest-init <source>`
+- `llm-wiki status`
+- `llm-wiki graph`
 
 The intent is pragmatic:
 
 - `reindex` keeps `wiki/index.md` generated from the actual wiki
 - `search` gives the LLM a cheap local discovery tool
+- `query` assembles an LLM-ready markdown context bundle with traceable snippets
 - `lint` catches structural drift before it compounds
-- `ingest-init` handles raw source canonicalization and source-page scaffolding
+- `ingest-init` canonicalizes raw sources, scaffolds source pages from the repo template, and refreshes `wiki/index.md`
+- `status` shows counts, hubs, backlinks, and orphan pages
+- `graph` prints simple adjacency so link structure is visible in plain text
 
 Example usage:
 
 ```bash
 llm-wiki reindex
 llm-wiki search "llm wiki"
+llm-wiki query "What is the core difference between a persistent wiki and ad hoc RAG?"
 llm-wiki lint
 llm-wiki ingest-init raw/inbox/new-article.md
+llm-wiki status
+llm-wiki graph
 ```
