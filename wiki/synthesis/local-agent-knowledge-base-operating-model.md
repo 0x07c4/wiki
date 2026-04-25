@@ -2,7 +2,7 @@
 page_type: synthesis
 status: active
 last_updated: 2026-04-26
-source_count: 8
+source_count: 9
 ---
 
 # Local Agent Knowledge Base Operating Model
@@ -17,7 +17,7 @@ Use a four-layer model:
 
 - `raw/` is the evidence layer.
 - `wiki/` is the compiled knowledge layer.
-- `llm-wiki` CLI, playbooks, templates, and `AGENTS.md` are the agent operation layer.
+- `llm-wiki` CLI, playbooks, templates, `AGENTS.md`, and the Codex `llm-wiki` skill are the agent operation layer.
 - Obsidian is the human navigation and review layer.
 
 Plugins should extend this model only where repeated workflow friction appears. Obsidian's built-in graph views already provide the baseline knowledge-graph navigation surface.
@@ -30,10 +30,12 @@ Plugins should extend this model only where repeated workflow friction appears. 
 - The agent interaction formalism source argues that reliable agent systems need explicit protocol, capability boundaries, and invariants rather than prompt text alone. In this repository, those constraints live in `AGENTS.md`, playbooks, lint checks, and traceable source conventions. [Source: Agent Interaction Formalism](../sources/notes-agent-interaction-formalism.md)
 - Recent agent frontier sources show the field moving toward models packaged with runtime, sandbox, tools, skills, approvals, and evaluation infrastructure. This supports treating local CLI commands and operational playbooks as part of the knowledge base, not as incidental scripts. [Source: AI Agent Frontier Scouting Pack 2026-04-25](../sources/agent-frontier-scouting-2026-04-25.md)
 - The agent skills source cluster frames reusable procedures, scripts, and metadata as portable agent capability. This supports keeping project workflows such as ingest, lint, notes import, and Obsidian review as explicit playbooks. [Source: Agent Skills and Claude Code Cluster 2026-04-25](../sources/agent-skills-claude-code-cluster-2026-04-25.md)
+- The Codex `llm-wiki` skill connects future Codex sessions to the wiki through the standard `$HOME/.codex/skills` discovery path and a repo-local CLI wrapper. [Source: Codex llm-wiki Skill 2026-04-26](../sources/codex-llm-wiki-skill-2026-04-26.md)
 
 ## Implications
 
 - Future agents should start from `wiki/index.md`, then use `llm-wiki search`, `query`, `status`, or `graph` when local structure matters.
+- Future Codex sessions should use `$HOME/.codex/skills/llm-wiki/scripts/llm-wiki` when they need local long-term context or traceable wiki knowledge.
 - Tool integrations should prefer JSON output from `llm-wiki search --json`, `llm-wiki status --json`, `llm-wiki graph --json`, and `llm-wiki query --json`, following the [llm-wiki JSON Output Contract](llm-wiki-json-output-contract.md).
 - The first Obsidian integration should stay read-only and handoff-oriented, as implemented by the current plugin skeleton. [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
 - Durable claims should flow from `raw/` into source summaries, then into concept, entity, or synthesis pages.
@@ -49,6 +51,7 @@ Plugins should extend this model only where repeated workflow friction appears. 
 - Which `llm-wiki` commands should be callable from the active Obsidian page?
 - What metadata fields are needed before Dataview-style dashboards become useful?
 - Which `llm-wiki` JSON fields should be stabilized before an Obsidian Agent Workbench is implemented?
+- Is the Codex skill sufficient, or should the next integration layer expose `llm-wiki` as MCP tools?
 
 ## Related Pages
 
@@ -59,6 +62,8 @@ Plugins should extend this model only where repeated workflow friction appears. 
 - [Obsidian](../entities/obsidian.md)
 - [Obsidian Agent Workbench MVP](obsidian-agent-workbench-mvp.md)
 - [llm-wiki JSON Output Contract](llm-wiki-json-output-contract.md)
+- [Codex Wiki Integration](codex-wiki-integration.md)
+- [Source: Codex llm-wiki Skill 2026-04-26](../sources/codex-llm-wiki-skill-2026-04-26.md)
 - [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
 - [Persistent Wiki vs Ad Hoc RAG](persistent-wiki-vs-ad-hoc-rag.md)
 
@@ -72,3 +77,4 @@ Plugins should extend this model only where repeated workflow friction appears. 
 - [2026-04-25-agent-skills-claude-code-cluster.md](../../raw/sources/agent-skills/2026-04-25-agent-skills-claude-code-cluster.md)
 - [2026-04-25-llm-wiki-json-contract.md](../../raw/sources/tooling/2026-04-25-llm-wiki-json-contract.md)
 - [2026-04-26-obsidian-agent-workbench-skeleton.md](../../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-skeleton.md)
+- [2026-04-26-codex-llm-wiki-skill.md](../../raw/sources/tooling/2026-04-26-codex-llm-wiki-skill.md)

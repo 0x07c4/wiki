@@ -2,7 +2,7 @@
 page_type: overview
 status: active
 last_updated: 2026-04-26
-source_count: 9
+source_count: 12
 ---
 
 # Overview
@@ -26,6 +26,7 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - the first plugin direction is a read-first Obsidian Agent Workbench for active-page context, repo health, and agent handoff
 - a read-only Obsidian Agent Workbench skeleton now exists under `tools/obsidian-agent-workbench/`
 - JSON output from `llm-wiki` now has a versioned contract for tool and plugin consumers
+- a Codex-native `llm-wiki` skill now connects future Codex sessions to this wiki through `$HOME/.codex/skills/llm-wiki`
 - upstream notes can remain the user's source of intent while the wiki maintains the structured knowledge layer
 - fast-moving AI agent releases can be collected as source packs before being promoted into stable pages
 
@@ -48,6 +49,7 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - [Local Agent Knowledge Base Operating Model](synthesis/local-agent-knowledge-base-operating-model.md)
 - [Obsidian Agent Workbench MVP](synthesis/obsidian-agent-workbench-mvp.md)
 - [llm-wiki JSON Output Contract](synthesis/llm-wiki-json-output-contract.md)
+- [Codex Wiki Integration](synthesis/codex-wiki-integration.md)
 - [Agent Runtime as Transaction Layer](synthesis/agent-runtime-as-transaction-layer.md)
 - [AI Agent Frontier Radar 2026-04](synthesis/ai-agent-frontier-radar-2026-04.md)
 - [What Makes a Good Agent Skill](synthesis/what-makes-a-good-agent-skill.md)
@@ -63,6 +65,9 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - [Source: llm-wiki JSON Contract 2026-04-25](sources/llm-wiki-json-contract-2026-04-25.md)
 - [Source: llm-wiki Search JSON Contract 2026-04-25](sources/llm-wiki-search-json-contract-2026-04-25.md)
 - [Source: Obsidian Agent Workbench Skeleton 2026-04-26](sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
+- [Source: Obsidian Agent Workbench JSON Copy 2026-04-26](sources/obsidian-agent-workbench-json-copy-2026-04-26.md)
+- [Source: Obsidian Agent Workbench Status Panel 2026-04-26](sources/obsidian-agent-workbench-status-panel-2026-04-26.md)
+- [Source: Codex llm-wiki Skill 2026-04-26](sources/codex-llm-wiki-skill-2026-04-26.md)
 
 ## Open Questions
 
@@ -77,6 +82,7 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - Which wiki synthesis pages should eventually be promoted back into `~/workspace/notes`?
 - Which agent frontier sources should be deep-ingested next instead of remaining in source-pack form?
 - Which public skill repositories deserve a maintained watchlist?
+- Is the `llm-wiki` Codex skill enough, or does repeated use justify a dedicated MCP server?
 
 ## Citations
 
@@ -89,3 +95,6 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - [2026-04-25-llm-wiki-json-contract.md](../raw/sources/tooling/2026-04-25-llm-wiki-json-contract.md)
 - [2026-04-25-llm-wiki-search-json-contract.md](../raw/sources/tooling/2026-04-25-llm-wiki-search-json-contract.md)
 - [2026-04-26-obsidian-agent-workbench-skeleton.md](../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-skeleton.md)
+- [2026-04-26-obsidian-agent-workbench-json-copy.md](../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-json-copy.md)
+- [2026-04-26-obsidian-agent-workbench-status-panel.md](../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-status-panel.md)
+- [2026-04-26-codex-llm-wiki-skill.md](../raw/sources/tooling/2026-04-26-codex-llm-wiki-skill.md)

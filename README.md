@@ -62,6 +62,7 @@ Obsidian is treated as the human workbench for this repo:
 
 - [playbooks/ingest-checklist.md](playbooks/ingest-checklist.md): default runbook for source ingest
 - [playbooks/lint-checklist.md](playbooks/lint-checklist.md): default runbook for wiki health checks
+- [playbooks/codex-integration-checklist.md](playbooks/codex-integration-checklist.md): runbook for verifying Codex skill integration with this wiki
 - [playbooks/notes-to-wiki-checklist.md](playbooks/notes-to-wiki-checklist.md): runbook for importing selected notes as sources
 - [playbooks/obsidian-workbench-checklist.md](playbooks/obsidian-workbench-checklist.md): runbook for using Obsidian as the human review and graph navigation layer
 - [templates/source-page.md](templates/source-page.md): source summary template
@@ -96,12 +97,15 @@ The machine-readable CLI contract is captured in [llm-wiki JSON Output Contract]
 
 The first plugin skeleton lives in [tools/obsidian-agent-workbench](tools/obsidian-agent-workbench). It is read-only: it displays active-page context and prepares `llm-wiki` command handoffs without writing wiki files.
 
+The first Codex integration is captured in [Codex Wiki Integration](wiki/synthesis/codex-wiki-integration.md). It installs a `llm-wiki` skill under `~/.codex/skills/llm-wiki`, uses a wrapper to call the repo-local CLI, and routes future Codex tasks through the wiki when local long-term context or traceable knowledge is needed.
+
 ## Next expansion
 
 - continue ingesting high-value agent-field sources one at a time
 - maintain synthesis pages that help future agents decide what matters
 - tighten `AGENTS.md` when the workflow shows friction
 - stabilize the JSON fields that an Obsidian Agent Workbench would consume
+- test the `llm-wiki` Codex skill in a fresh session
 - decide whether search results need matched-field explanations before plugin implementation
 
 ## CLI

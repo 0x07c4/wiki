@@ -10,8 +10,14 @@ import {
   TFile,
   WorkspaceLeaf,
 } from "obsidian";
+import { execFile } from "child_process";
+import path from "path";
+import { promisify } from "util";
 
 const VIEW_TYPE_AGENT_WORKBENCH = "llm-wiki-agent-workbench";
+const FALLBACK_LLM_WIKI_COMMAND = "llm-wiki";
+const COMMAND_OUTPUT_MAX_BUFFER = 10 * 1024 * 1024;
+const execFileAsync = promisify(execFile);
 
 interface AgentWorkbenchSettings {
   llmWikiCommand: string;
@@ -19,9 +25,42 @@ interface AgentWorkbenchSettings {
 }
 
 const DEFAULT_SETTINGS: AgentWorkbenchSettings = {
-  llmWikiCommand: "llm-wiki",
+  llmWikiCommand: "",
   repoRoot: "",
 };
+
+interface LlmWikiInvocation {
+  executable: string;
+  args: string[];
+  commandText: string;
+  env: NodeJS.ProcessEnv;
+}
+
+interface StatusCounts {
+  raw_inbox: number;
+  raw_sources: number;
+  raw_markdown_total: number;
+  wiki_pages: number;
+  all_markdown_pages_tracked: number;
+}
+
+interface StatusNode {
+  path: string;
+  title: string;
+  page_type: string;
+  backlinks: number;
+  outbound: number;
+  outbound_targets?: string[];
+}
+
+interface StatusPayload {
+  schema_version: string;
+  command: string;
+  counts: StatusCounts;
+  page_types: Record<string, number>;
+  hubs: StatusNode[];
+  orphans: StatusNode[];
+}
 
 export default class AgentWorkbenchPlugin extends Plugin {
   settings: AgentWorkbenchSettings = DEFAULT_SETTINGS;
@@ -56,18 +95,18 @@ export default class AgentWorkbenchPlugin extends Plugin {
 
     this.addCommand({
       id: "copy-status-json-command",
-      name: "Copy llm-wiki status command",
+      name: "Copy llm-wiki status JSON",
       callback: () => {
-        void this.copyCommand(["status", "--json"]);
+        void this.copyCommandOutput(["status", "--json"], "status JSON");
       },
     });
 
     this.addCommand({
       id: "copy-active-search-json-command",
-      name: "Copy llm-wiki search command for active page",
+      name: "Copy llm-wiki search JSON for active page",
       callback: () => {
         const topic = this.getActiveTopic();
-        void this.copyCommand(["search", topic, "--json"]);
+        void this.copyCommandOutput(["search", topic, "--json"], "search JSON");
       },
     });
 
@@ -127,15 +166,83 @@ export default class AgentWorkbenchPlugin extends Plugin {
     return ".";
   }
 
+  buildInvocation(args: string[]): LlmWikiInvocation {
+    const repoRoot = this.getRepoRoot();
+    const configured = this.settings.llmWikiCommand.trim();
+
+    if (configured) {
+      const configuredArgs = splitCommandLine(configured);
+      const [executable, ...prefixArgs] = configuredArgs;
+      const invocationArgs = [...prefixArgs, "--repo-root", repoRoot, ...args];
+      return {
+        executable,
+        args: invocationArgs,
+        commandText: [...configuredArgs, "--repo-root", repoRoot, ...args].map(shellQuote).join(" "),
+        env: { ...process.env },
+      };
+    }
+
+    const localSrc = path.join(repoRoot, "src");
+    const pythonPath = process.env.PYTHONPATH
+      ? `${localSrc}${path.delimiter}${process.env.PYTHONPATH}`
+      : localSrc;
+    const invocationArgs = ["-m", "llm_wiki.cli", "--repo-root", repoRoot, ...args];
+
+    return {
+      executable: "python3",
+      args: invocationArgs,
+      commandText: `PYTHONPATH=${shellQuote(pythonPath)} ${["python3", ...invocationArgs]
+        .map(shellQuote)
+        .join(" ")}`,
+      env: {
+        ...process.env,
+        PYTHONPATH: pythonPath,
+      },
+    };
+  }
+
   buildCommand(args: string[]): string {
-    const command = [this.settings.llmWikiCommand, "--repo-root", this.getRepoRoot(), ...args];
-    return command.map(shellQuote).join(" ");
+    return this.buildInvocation(args).commandText;
   }
 
   async copyCommand(args: string[]) {
     const command = this.buildCommand(args);
     await navigator.clipboard.writeText(command);
     new Notice("Copied llm-wiki command.");
+  }
+
+  async runCommand(args: string[]): Promise<string> {
+    const invocation = this.buildInvocation(args);
+    const { stdout } = await execFileAsync(invocation.executable, invocation.args, {
+      cwd: this.getRepoRoot(),
+      env: invocation.env,
+      maxBuffer: COMMAND_OUTPUT_MAX_BUFFER,
+    });
+    return String(stdout);
+  }
+
+  async readJson<T>(args: string[]): Promise<T> {
+    return JSON.parse(await this.runCommand(args)) as T;
+  }
+
+  async readStatus(): Promise<StatusPayload> {
+    const status = await this.readJson<StatusPayload>(["status", "--json"]);
+    if (status.command !== "status" || status.schema_version !== "1") {
+      throw new Error("Unsupported llm-wiki status payload.");
+    }
+    return status;
+  }
+
+  async copyCommandOutput(args: string[], label: string) {
+    try {
+      await navigator.clipboard.writeText(await this.runCommand(args));
+      new Notice(`Copied ${label}.`);
+    } catch (error) {
+      const invocation = this.buildInvocation(args);
+      console.error("Agent Workbench failed to run llm-wiki.", error);
+      await navigator.clipboard.writeText(invocation.commandText);
+      new Notice("Could not run llm-wiki; copied command instead.");
+    }
   }
 
   getActiveTopic(): string {
@@ -159,6 +266,8 @@ export default class AgentWorkbenchPlugin extends Plugin {
 }
 
 class AgentWorkbenchView extends ItemView {
+  private renderRunId = 0;
+
   constructor(
     leaf: WorkspaceLeaf,
     private readonly plugin: AgentWorkbenchPlugin,
@@ -183,6 +292,7 @@ class AgentWorkbenchView extends ItemView {
   }
 
   render() {
+    const renderRunId = ++this.renderRunId;
     const container = this.containerEl.children[1];
     container.empty();
     container.addClass("agent-workbench");
@@ -192,7 +302,7 @@ class AgentWorkbenchView extends ItemView {
 
     this.renderActivePage(container, file);
     this.renderRelatedContext(container, file);
-    this.renderRepoHealth(container);
+    this.renderRepoHealth(container, renderRunId);
     this.renderAgentHandoff(container, file);
     this.renderReviewQueue(container);
   }
@@ -241,7 +351,21 @@ class AgentWorkbenchView extends ItemView {
 
     const list = section.createEl("ul", { cls: "agent-workbench-list" });
     for (const link of links.slice(0, 12)) {
-      list.createEl("li", { text: link.link });
+      const item = list.createEl("li");
+      const destination = this.app.metadataCache.getFirstLinkpathDest(link.link, file.path);
+      const anchor = item.createEl("a", {
+        text: link.link,
+        href: "#",
+        cls: destination ? "agent-workbench-link" : "agent-workbench-link is-missing",
+      });
+      anchor.addEventListener("click", (event) => {
+        event.preventDefault();
+        if (!destination) {
+          new Notice("Linked page not found.");
+          return;
+        }
+        void this.app.workspace.openLinkText(link.link, file.path, false);
+      });
     }
     if (links.length > 12) {
       section.createEl("p", {
@@ -251,15 +375,107 @@ class AgentWorkbenchView extends ItemView {
     }
   }
 
-  private renderRepoHealth(container: Element) {
+  private renderRepoHealth(container: Element, renderRunId: number) {
     const section = createSection(container, "Repo Health");
+    const statusContainer = section.createEl("div", { cls: "agent-workbench-status" });
+    statusContainer.createEl("p", {
+      text: "Loading repo status...",
+      cls: "agent-workbench-muted",
+    });
+    void this.renderRepoHealthSnapshot(statusContainer, renderRunId);
+
     createCommandButton(section, "Copy status JSON", () => {
-      void this.plugin.copyCommand(["status", "--json"]);
+      void this.plugin.copyCommandOutput(["status", "--json"], "status JSON");
     });
     createCommandButton(section, "Copy graph JSON", () => {
-      void this.plugin.copyCommand(["graph", "--json"]);
+      void this.plugin.copyCommandOutput(["graph", "--json"], "graph JSON");
     });
     createKV(section, "Repo Root", this.plugin.getRepoRoot());
+  }
+
+  private async renderRepoHealthSnapshot(container: Element, renderRunId: number) {
+    try {
+      const status = await this.plugin.readStatus();
+      if (renderRunId !== this.renderRunId) {
+        return;
+      }
+      container.empty();
+      this.renderStatusSummary(container, status);
+    } catch (error) {
+      if (renderRunId !== this.renderRunId) {
+        return;
+      }
+      console.error("Agent Workbench failed to render repo health.", error);
+      container.empty();
+      container.createEl("p", {
+        text: "Repo status unavailable. Use Copy status JSON for command handoff.",
+        cls: "agent-workbench-muted",
+      });
+    }
+  }
+
+  private renderStatusSummary(container: Element, status: StatusPayload) {
+    const statGrid = container.createEl("div", { cls: "agent-workbench-stat-grid" });
+    createStat(statGrid, "Raw", status.counts.raw_sources);
+    createStat(statGrid, "Wiki", status.counts.wiki_pages);
+    createStat(statGrid, "Inbox", status.counts.raw_inbox);
+    createStat(statGrid, "Orphans", status.orphans.length);
+
+    const hubs = status.hubs.slice(0, 3);
+    if (hubs.length) {
+      container.createEl("p", {
+        text: "Top hubs",
+        cls: "agent-workbench-subheading",
+      });
+      const list = container.createEl("ol", { cls: "agent-workbench-compact-list" });
+      for (const hub of hubs) {
+        const item = list.createEl("li");
+        this.createVaultPathLink(item, hub.path, hub.title || hub.path);
+        item.createSpan({
+          text: ` ${hub.backlinks} backlinks`,
+          cls: "agent-workbench-inline-muted",
+        });
+      }
+    }
+
+    if (status.orphans.length) {
+      container.createEl("p", {
+        text: "Orphans",
+        cls: "agent-workbench-subheading",
+      });
+      const list = container.createEl("ul", { cls: "agent-workbench-compact-list" });
+      for (const orphan of status.orphans.slice(0, 5)) {
+        const item = list.createEl("li");
+        this.createVaultPathLink(item, orphan.path, orphan.title || orphan.path);
+      }
+      if (status.orphans.length > 5) {
+        container.createEl("p", {
+          text: `${status.orphans.length - 5} more orphans omitted.`,
+          cls: "agent-workbench-muted",
+        });
+      }
+    }
+  }
+
+  private createVaultPathLink(container: Element, filePath: string, label: string) {
+    const destination = this.app.vault.getAbstractFileByPath(filePath);
+    if (!(destination instanceof TFile)) {
+      container.createSpan({
+        text: label,
+        cls: "agent-workbench-inline-muted",
+      });
+      return;
+    }
+
+    const anchor = container.createEl("a", {
+      text: label,
+      href: "#",
+      cls: "agent-workbench-link",
+    });
+    anchor.addEventListener("click", (event) => {
+      event.preventDefault();
+      void this.app.workspace.openLinkText(filePath, "", false);
+    });
   }
 
   private renderAgentHandoff(container: Element, file: TFile | null) {
@@ -267,10 +483,10 @@ class AgentWorkbenchView extends ItemView {
     const topic = file ? this.plugin.getActiveTopic() : "overview";
 
     createCommandButton(section, "Copy search JSON", () => {
-      void this.plugin.copyCommand(["search", topic, "--json"]);
+      void this.plugin.copyCommandOutput(["search", topic, "--json"], "search JSON");
     });
     createCommandButton(section, "Copy query JSON", () => {
-      void this.plugin.copyCommand(["query", topic, "--json"]);
+      void this.plugin.copyCommandOutput(["query", topic, "--json"], "query JSON");
     });
     createCommandButton(section, "Copy lint command", () => {
       void this.plugin.copyCommand(["lint"]);
@@ -301,13 +517,13 @@ class AgentWorkbenchSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("llm-wiki command")
-      .setDesc("Command used when preparing shell handoff commands.")
+      .setDesc("Optional override. Leave blank to run the local repo CLI with python3 and PYTHONPATH=src.")
       .addText((text) =>
         text
           .setPlaceholder("llm-wiki")
           .setValue(this.plugin.settings.llmWikiCommand)
           .onChange(async (value) => {
-            this.plugin.settings.llmWikiCommand = value.trim() || DEFAULT_SETTINGS.llmWikiCommand;
+            this.plugin.settings.llmWikiCommand = value.trim();
             await this.plugin.saveSettings();
           }),
       );
@@ -339,6 +555,12 @@ function createKV(container: Element, key: string, value: string) {
   row.createEl("code", { text: value || "-", cls: "agent-workbench-value" });
 }
 
+function createStat(container: Element, label: string, value: number) {
+  const stat = container.createEl("div", { cls: "agent-workbench-stat" });
+  stat.createEl("span", { text: String(value), cls: "agent-workbench-stat-value" });
+  stat.createEl("span", { text: label, cls: "agent-workbench-stat-label" });
+}
+
 function createCommandButton(container: Element, label: string, onClick: () => void) {
   const button = container.createEl("button", {
     text: label,
@@ -359,4 +581,57 @@ function shellQuote(value: string): string {
     return value;
   }
   return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function splitCommandLine(input: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let quote: "'" | '"' | null = null;
+  let escaping = false;
+
+  for (const char of input) {
+    if (escaping) {
+      current += char;
+      escaping = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      escaping = true;
+      continue;
+    }
+
+    if (quote) {
+      if (char === quote) {
+        quote = null;
+      } else {
+        current += char;
+      }
+      continue;
+    }
+
+    if (char === "'" || char === '"') {
+      quote = char;
+      continue;
+    }
+
+    if (/\s/.test(char)) {
+      if (current) {
+        parts.push(current);
+        current = "";
+      }
+      continue;
+    }
+
+    current += char;
+  }
+
+  if (escaping) {
+    current += "\\";
+  }
+  if (current) {
+    parts.push(current);
+  }
+
+  return parts.length ? parts : [FALLBACK_LLM_WIKI_COMMAND];
 }

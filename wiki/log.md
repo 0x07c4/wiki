@@ -118,3 +118,30 @@
 - added plugin settings for `llm-wiki` command and repository root
 - verified `npm run typecheck` and `npm run build`
 - recorded the implementation as a local tooling source note
+
+## [2026-04-26] tooling | Obsidian Agent Workbench JSON copy
+
+- made related-context links clickable in the Agent Workbench side panel
+- changed JSON buttons from copying shell commands to copying actual read-only `llm-wiki` JSON output
+- defaulted plugin command execution to the local repo CLI through `python3 -m llm_wiki.cli` with `PYTHONPATH=src`
+- kept command-copy fallback when local execution fails
+- verified `npm run typecheck`, `npm run build`, local CLI JSON output, and `python3 -m unittest discover -s tests`
+- recorded the implementation as a local tooling source note
+
+## [2026-04-26] tooling | Obsidian Agent Workbench status panel
+
+- rendered `llm-wiki status --json` directly in the Repo Health section
+- added compact stats for raw sources, wiki pages, inbox items, and orphan pages
+- added clickable top-hub links from the status payload
+- kept status/graph JSON copy buttons for agent handoff
+- verified `npm run typecheck`, `npm run build`, `python3 -m unittest discover -s tests`, `llm-wiki lint`, and `llm-wiki reindex --check`
+- recorded the implementation as a local tooling source note
+
+## [2026-04-26] tooling | Codex llm-wiki skill
+
+- installed a `llm-wiki` Codex skill under `$HOME/.codex/skills/llm-wiki`
+- added a wrapper script so Codex can call the repo-local CLI without a global `llm-wiki` install
+- added a global `ACTIVE.md` routing rule for local long-term context and traceable wiki knowledge tasks
+- added a Codex integration checklist and synthesis page
+- verified skill validation, `status --json`, and `query --json` through the wrapper
+- verified `sync-agent-config.sh --dry-run` includes the new skill in the sanitized export

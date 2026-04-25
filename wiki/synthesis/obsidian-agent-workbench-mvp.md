@@ -2,7 +2,7 @@
 page_type: synthesis
 status: active
 last_updated: 2026-04-26
-source_count: 9
+source_count: 11
 ---
 
 # Obsidian Agent Workbench MVP
@@ -71,15 +71,18 @@ The first skeleton exists under `tools/obsidian-agent-workbench/`. It implements
 - a TypeScript plugin entry point
 - an `Agent Workbench` side view
 - active-page metadata display
-- outbound link display from Obsidian metadata
-- command-copy handoffs for `llm-wiki` JSON workflows
-- settings for `llm-wiki` command and repository root
+- clickable outbound links from Obsidian metadata
+- in-panel repo health summary from `llm-wiki status --json`
+- read-only JSON-copy handoffs for `llm-wiki status`, `graph`, `search`, and `query`
+- local repo CLI execution through `python3 -m llm_wiki.cli` with `PYTHONPATH=src`
+- command-copy fallback if local execution fails
+- settings for an optional `llm-wiki` command override and repository root
 
-It remains read-only and copy-only. It does not execute shell commands or write wiki files. [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
+It remains read-only. It executes safe local read commands only to render or copy JSON output and does not write wiki files. [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md), [Source: Obsidian Agent Workbench JSON Copy 2026-04-26](../sources/obsidian-agent-workbench-json-copy-2026-04-26.md), [Source: Obsidian Agent Workbench Status Panel 2026-04-26](../sources/obsidian-agent-workbench-status-panel-2026-04-26.md)
 
 ## Open Questions
 
-- Should command execution happen inside Obsidian, or should the plugin only copy shell commands for now?
+- Should `search` and `query` JSON also render previews directly in the panel?
 - Which JSON fields should be treated as stable plugin API versus internal CLI details?
 - Should review queue data come from `git status`, `wiki/log.md`, or a dedicated agent-generated review file?
 - Would an Obsidian Bases view be better than a custom side panel for dashboards over frontmatter?
@@ -91,6 +94,8 @@ It remains read-only and copy-only. It does not execute shell commands or write 
 - [Local Agent Knowledge Base Operating Model](local-agent-knowledge-base-operating-model.md)
 - [llm-wiki JSON Output Contract](llm-wiki-json-output-contract.md)
 - [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
+- [Source: Obsidian Agent Workbench JSON Copy 2026-04-26](../sources/obsidian-agent-workbench-json-copy-2026-04-26.md)
+- [Source: Obsidian Agent Workbench Status Panel 2026-04-26](../sources/obsidian-agent-workbench-status-panel-2026-04-26.md)
 - [LLM Wiki](../concepts/llm-wiki.md)
 - [Ingest, Query, Lint](../concepts/ingest-query-lint.md)
 - [Agent Runtime](../concepts/agent-runtime.md)
@@ -106,3 +111,5 @@ It remains read-only and copy-only. It does not execute shell commands or write 
 - [2026-04-25-llm-wiki-json-contract.md](../../raw/sources/tooling/2026-04-25-llm-wiki-json-contract.md)
 - [2026-04-25-llm-wiki-search-json-contract.md](../../raw/sources/tooling/2026-04-25-llm-wiki-search-json-contract.md)
 - [2026-04-26-obsidian-agent-workbench-skeleton.md](../../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-skeleton.md)
+- [2026-04-26-obsidian-agent-workbench-json-copy.md](../../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-json-copy.md)
+- [2026-04-26-obsidian-agent-workbench-status-panel.md](../../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-status-panel.md)
