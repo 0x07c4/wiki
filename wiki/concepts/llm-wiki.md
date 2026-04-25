@@ -1,8 +1,8 @@
 ---
 page_type: concept
 status: active
-last_updated: 2026-04-10
-source_count: 1
+last_updated: 2026-04-25
+source_count: 2
 ---
 
 # LLM Wiki
@@ -26,6 +26,7 @@ The model does the bookkeeping that makes knowledge systems decay in normal use:
 - the wiki is the working memory layer
 - schema files such as `AGENTS.md` define disciplined behavior
 - the knowledge base compounds instead of resetting on every query
+- Obsidian can serve as the human workbench while the LLM maintains the markdown files, with built-in graph views exposing link structure
 
 ## Tensions
 
@@ -36,9 +37,12 @@ The model does the bookkeeping that makes knowledge systems decay in normal use:
 ## Related Pages
 
 - [Seed Source: LLM Wiki Pattern](../sources/seed-llm-wiki-pattern.md)
+- [Source: Obsidian Graph View 2026-04-25](../sources/obsidian-graph-view-2026-04-25.md)
 - [Ingest, Query, Lint](ingest-query-lint.md)
 - [Persistent Wiki vs Ad Hoc RAG](../synthesis/persistent-wiki-vs-ad-hoc-rag.md)
+- [Local Agent Knowledge Base Operating Model](../synthesis/local-agent-knowledge-base-operating-model.md)
 
 ## Citations
 
 - [seed-llm-wiki-pattern.md](../../raw/sources/seed-llm-wiki-pattern.md)
+- [2026-04-25-obsidian-graph-view.md](../../raw/sources/obsidian/2026-04-25-obsidian-graph-view.md)

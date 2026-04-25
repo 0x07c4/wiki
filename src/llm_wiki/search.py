@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+import json
 from pathlib import Path
 
 from llm_wiki.indexing import Page, scan_wiki_pages, tokenize
@@ -43,11 +44,42 @@ def search_pages(repo_root: Path, query: str, limit: int = 10) -> list[SearchRes
     return results[:limit]
 
 
-def search_command(repo_root: Path, query: str, limit: int = 10) -> int:
+def search_results_to_dict(query: str, results: list[SearchResult]) -> dict[str, object]:
+    return {
+        "schema_version": "1",
+        "command": "search",
+        "query": query,
+        "results": [
+            {
+                "rank": index,
+                "path": result.page.display_path,
+                "title": result.page.title,
+                "page_type": result.page.page_type,
+                "score": result.score,
+                "summary": result.page.summary,
+                "source_path": result.page.frontmatter.get("source_path"),
+            }
+            for index, result in enumerate(results, start=1)
+        ],
+    }
+
+
+def render_search_json(query: str, results: list[SearchResult]) -> str:
+    return json.dumps(search_results_to_dict(query, results), ensure_ascii=False, indent=2) + "\n"
+
+
+def search_command(repo_root: Path, query: str, limit: int = 10, json_output: bool = False) -> int:
     results = search_pages(repo_root, query=query, limit=limit)
     if not results:
+        if json_output:
+            print(render_search_json(query, results), end="")
+            return 0
         print(f'no results for "{query}"')
         return 1
+
+    if json_output:
+        print(render_search_json(query, results), end="")
+        return 0
 
     for index, result in enumerate(results, start=1):
         print(f"{index}. score={result.score} {result.page.display_path}")
@@ -55,4 +87,3 @@ def search_command(repo_root: Path, query: str, limit: int = 10) -> int:
         if result.page.summary:
             print(f"   {result.page.summary}")
     return 0
-

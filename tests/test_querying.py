@@ -5,10 +5,15 @@ import unittest
 from pathlib import Path
 
 import sys
+import json
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from llm_wiki.querying import build_query_context, build_query_context_markdown
+from llm_wiki.querying import (
+    build_query_context,
+    build_query_context_markdown,
+    render_query_context_json,
+)
 
 
 def write(path: Path, content: str) -> None:
@@ -98,6 +103,23 @@ The seed note argues that persistent wikis outperform ad hoc RAG for repeated sy
         self.assertIn("trace: wiki/sources/seed.md", markdown)
         self.assertIn("source_path: ../../raw/sources/seed.md", markdown)
         self.assertIn("Use the trace path", markdown)
+
+    def test_json_bundle_is_machine_readable(self) -> None:
+        bundle = build_query_context(self.repo_root, query="persistent wiki", limit=3, snippets_per_page=2)
+        payload = json.loads(render_query_context_json(bundle))
+
+        self.assertEqual(payload["schema_version"], "1")
+        self.assertEqual(payload["command"], "query")
+        self.assertEqual(payload["query"], "persistent wiki")
+        self.assertGreaterEqual(len(payload["selected_pages"]), 2)
+        first = payload["selected_pages"][0]
+        self.assertEqual(first["rank"], 1)
+        self.assertEqual(first["path"], "wiki/concepts/llm-wiki.md")
+        self.assertEqual(first["page_type"], "concept")
+        self.assertTrue(first["snippets"])
+
+        source_page = next(page for page in payload["selected_pages"] if page["path"] == "wiki/sources/seed.md")
+        self.assertEqual(source_page["source_path"], "../../raw/sources/seed.md")
 
 
 if __name__ == "__main__":

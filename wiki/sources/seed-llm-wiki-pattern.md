@@ -1,7 +1,7 @@
 ---
 page_type: source
 status: ingested
-last_updated: 2026-04-10
+last_updated: 2026-04-25
 source_count: 1
 source_path: ../../raw/sources/seed-llm-wiki-pattern.md
 ---
@@ -16,8 +16,10 @@ The seed note argues that a useful knowledge system should not rely on re-readin
 
 - persistent markdown pages are a better long-term artifact than transient chat answers
 - the wiki should sit between the user and raw sources
+- the user can keep an LLM agent and Obsidian side by side: the agent edits, while Obsidian acts as the human browsing and inspection layer
 - ingest, query, and lint should be treated as first-class operations
 - index and log files give the system enough structure to operate without heavyweight infrastructure at small scale
+- Obsidian Web Clipper, graph view, attachment handling, Marp, and Dataview are useful optional facilities around the markdown wiki
 
 ## Related Pages
 

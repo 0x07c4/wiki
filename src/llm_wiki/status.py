@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
+import json
 from pathlib import Path
 
 from llm_wiki.indexing import Page, scan_wiki_pages
@@ -165,6 +166,48 @@ def format_status_summary(snapshot: StatusSnapshot) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _repo_relative(repo_root: Path, path: Path) -> str:
+    return path.resolve().relative_to(repo_root.resolve()).as_posix()
+
+
+def _node_record(node: GraphNode) -> dict[str, object]:
+    return {
+        "path": node.page.display_path,
+        "title": node.page.title,
+        "page_type": node.page.page_type,
+        "backlinks": node.inbound,
+        "outbound": node.outbound,
+        "outbound_targets": node.outbound_targets,
+    }
+
+
+def status_to_dict(snapshot: StatusSnapshot) -> dict[str, object]:
+    nodes = sorted(snapshot.graph_nodes.values(), key=lambda item: item.page.display_path)
+    return {
+        "schema_version": "1",
+        "command": "status",
+        "counts": {
+            "raw_inbox": len(snapshot.raw_inbox_files),
+            "raw_sources": len(snapshot.raw_source_files),
+            "raw_markdown_total": snapshot.raw_markdown_count,
+            "wiki_pages": snapshot.wiki_count,
+            "all_markdown_pages_tracked": snapshot.page_count,
+        },
+        "raw": {
+            "inbox": [_repo_relative(snapshot.repo_root, path) for path in snapshot.raw_inbox_files],
+            "sources": [_repo_relative(snapshot.repo_root, path) for path in snapshot.raw_source_files],
+        },
+        "page_types": snapshot.page_type_counts,
+        "hubs": [_node_record(node) for node in snapshot.hubs[:5]],
+        "orphans": [_node_record(node) for node in snapshot.orphans],
+        "graph": [_node_record(node) for node in nodes],
+    }
+
+
+def format_status_json(snapshot: StatusSnapshot) -> str:
+    return json.dumps(status_to_dict(snapshot), ensure_ascii=False, indent=2) + "\n"
+
+
 def format_graph_adjacency(snapshot: StatusSnapshot) -> str:
     lines: list[str] = []
     for node in sorted(snapshot.graph_nodes.values(), key=lambda item: item.page.display_path):
@@ -173,13 +216,50 @@ def format_graph_adjacency(snapshot: StatusSnapshot) -> str:
     return "\n".join(lines)
 
 
-def status_command(repo_root: Path) -> int:
+def graph_to_dict(snapshot: StatusSnapshot) -> dict[str, object]:
+    nodes = sorted(snapshot.graph_nodes.values(), key=lambda item: item.page.display_path)
+    return {
+        "schema_version": "1",
+        "command": "graph",
+        "nodes": [
+            {
+                "path": node.page.display_path,
+                "title": node.page.title,
+                "page_type": node.page.page_type,
+                "backlinks": node.inbound,
+                "outbound": node.outbound,
+            }
+            for node in nodes
+        ],
+        "edges": [
+            {"source": node.page.display_path, "target": target}
+            for node in nodes
+            for target in node.outbound_targets
+        ],
+        "adjacency": {
+            node.page.display_path: node.outbound_targets
+            for node in nodes
+        },
+    }
+
+
+def format_graph_json(snapshot: StatusSnapshot) -> str:
+    return json.dumps(graph_to_dict(snapshot), ensure_ascii=False, indent=2) + "\n"
+
+
+def status_command(repo_root: Path, json_output: bool = False) -> int:
     snapshot = build_status_snapshot(repo_root)
-    print(format_status_summary(snapshot), end="")
+    if json_output:
+        print(format_status_json(snapshot), end="")
+    else:
+        print(format_status_summary(snapshot), end="")
     return 0
 
 
-def graph_command(repo_root: Path) -> int:
+def graph_command(repo_root: Path, json_output: bool = False) -> int:
     snapshot = build_status_snapshot(repo_root)
-    print(format_graph_adjacency(snapshot))
+    if json_output:
+        print(format_graph_json(snapshot), end="")
+    else:
+        print(format_graph_adjacency(snapshot))
     return 0

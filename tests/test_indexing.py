@@ -5,11 +5,12 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+import json
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
 from llm_wiki.indexing import build_index_markdown
-from llm_wiki.search import search_pages
+from llm_wiki.search import render_search_json, search_pages
 
 
 def write(path: Path, content: str) -> None:
@@ -79,6 +80,28 @@ This is the seed source summary for the wiki.
         results = search_pages(self.repo_root, query="llm wiki", limit=5)
         self.assertGreaterEqual(len(results), 1)
         self.assertEqual(results[0].page.path.name, "llm-wiki.md")
+
+    def test_search_json_is_machine_readable(self) -> None:
+        results = search_pages(self.repo_root, query="llm wiki", limit=5)
+        payload = json.loads(render_search_json("llm wiki", results))
+
+        self.assertEqual(payload["schema_version"], "1")
+        self.assertEqual(payload["command"], "search")
+        self.assertEqual(payload["query"], "llm wiki")
+        self.assertGreaterEqual(len(payload["results"]), 1)
+        first = payload["results"][0]
+        self.assertEqual(first["rank"], 1)
+        self.assertEqual(first["path"], "wiki/concepts/llm-wiki.md")
+        self.assertEqual(first["page_type"], "concept")
+        self.assertGreater(first["score"], 0)
+
+    def test_search_json_can_represent_empty_results(self) -> None:
+        payload = json.loads(render_search_json("zzzzzzzz", []))
+
+        self.assertEqual(payload["schema_version"], "1")
+        self.assertEqual(payload["command"], "search")
+        self.assertEqual(payload["query"], "zzzzzzzz")
+        self.assertEqual(payload["results"], [])
 
     def test_cli_reindex_stdout(self) -> None:
         env = {

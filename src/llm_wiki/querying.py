@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 from pathlib import Path
 
 from llm_wiki.indexing import Page, scan_wiki_pages, tokenize
@@ -140,19 +141,61 @@ def render_query_context_markdown(bundle: QueryContextBundle) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def query_context_to_dict(bundle: QueryContextBundle) -> dict[str, object]:
+    return {
+        "schema_version": "1",
+        "command": "query",
+        "query": bundle.query,
+        "selected_pages": [
+            {
+                "rank": index,
+                "title": context.page.title,
+                "path": context.trace_path,
+                "page_type": context.page.page_type,
+                "score": context.score,
+                "summary": context.page.summary,
+                "source_path": context.source_path,
+                "snippets": [
+                    {
+                        "line_number": snippet.line_number,
+                        "text": snippet.text,
+                    }
+                    for snippet in context.snippets
+                ],
+            }
+            for index, context in enumerate(bundle.contexts, start=1)
+        ],
+        "notes": [
+            "Use the path field to map each passage back to a concrete wiki file.",
+            "Source pages may include source_path for raw provenance.",
+        ],
+    }
+
+
+def render_query_context_json(bundle: QueryContextBundle) -> str:
+    return json.dumps(query_context_to_dict(bundle), ensure_ascii=False, indent=2) + "\n"
+
+
 def build_query_context_markdown(repo_root: Path, query: str, limit: int = 5, snippets_per_page: int = 3) -> str:
     bundle = build_query_context(repo_root, query=query, limit=limit, snippets_per_page=snippets_per_page)
     return render_query_context_markdown(bundle)
 
 
-def query_command(repo_root: Path, query: str, limit: int = 5, snippets_per_page: int = 3) -> int:
-    print(
-        build_query_context_markdown(
-            repo_root,
-            query=query,
-            limit=limit,
-            snippets_per_page=snippets_per_page,
-        ),
-        end="",
+def query_command(
+    repo_root: Path,
+    query: str,
+    limit: int = 5,
+    snippets_per_page: int = 3,
+    json_output: bool = False,
+) -> int:
+    bundle = build_query_context(
+        repo_root,
+        query=query,
+        limit=limit,
+        snippets_per_page=snippets_per_page,
     )
+    if json_output:
+        print(render_query_context_json(bundle), end="")
+    else:
+        print(render_query_context_markdown(bundle), end="")
     return 0

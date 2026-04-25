@@ -5,10 +5,17 @@ import unittest
 from pathlib import Path
 
 import sys
+import json
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from llm_wiki.status import build_status_snapshot, format_graph_adjacency, format_status_summary
+from llm_wiki.status import (
+    build_status_snapshot,
+    format_graph_adjacency,
+    format_graph_json,
+    format_status_json,
+    format_status_summary,
+)
 
 
 def write(path: Path, content: str) -> None:
@@ -143,6 +150,29 @@ No inbound links yet.
         self.assertIn("page types", summary.lower())
         self.assertIn("wiki/concepts/llm-wiki.md ->", adjacency)
         self.assertIn("wiki/sources/source-one.md -> wiki/concepts/llm-wiki.md", adjacency)
+
+    def test_json_renderers_are_machine_readable(self) -> None:
+        snapshot = build_status_snapshot(self.repo_root)
+        status = json.loads(format_status_json(snapshot))
+        graph = json.loads(format_graph_json(snapshot))
+
+        self.assertEqual(status["schema_version"], "1")
+        self.assertEqual(status["command"], "status")
+        self.assertEqual(status["counts"]["raw_inbox"], 1)
+        self.assertEqual(status["counts"]["wiki_pages"], 7)
+        self.assertEqual(status["page_types"]["concept"], 1)
+        self.assertIn("raw/sources/source-one.md", status["raw"]["sources"])
+        self.assertEqual(status["hubs"][0]["path"], "wiki/concepts/llm-wiki.md")
+        self.assertEqual(graph["schema_version"], "1")
+        self.assertEqual(graph["command"], "graph")
+        self.assertIn(
+            {"source": "wiki/sources/source-one.md", "target": "wiki/concepts/llm-wiki.md"},
+            graph["edges"],
+        )
+        self.assertEqual(
+            graph["adjacency"]["wiki/sources/source-one.md"],
+            ["wiki/concepts/llm-wiki.md"],
+        )
 
 
 if __name__ == "__main__":

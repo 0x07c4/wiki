@@ -24,6 +24,7 @@ def build_parser() -> argparse.ArgumentParser:
     search = subparsers.add_parser("search", help="Search wiki pages using lightweight local scoring.")
     search.add_argument("query", help="Query string to search for.")
     search.add_argument("--limit", type=int, default=10, help="Maximum number of results to print.")
+    search.add_argument("--json", action="store_true", help="Print structured JSON search results.")
 
     query = subparsers.add_parser(
         "query",
@@ -37,11 +38,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=3,
         help="Maximum number of extracted snippets per page.",
     )
+    query.add_argument("--json", action="store_true", help="Print a structured JSON context bundle.")
 
     lint = subparsers.add_parser("lint", help="Run structural checks against the wiki.")
 
-    subparsers.add_parser("status", help="Show raw/wiki counts, hubs, backlinks, and orphans.")
-    subparsers.add_parser("graph", help="Print wiki link adjacency for local inspection.")
+    status = subparsers.add_parser("status", help="Show raw/wiki counts, hubs, backlinks, and orphans.")
+    status.add_argument("--json", action="store_true", help="Print structured JSON status output.")
+
+    graph = subparsers.add_parser("graph", help="Print wiki link adjacency for local inspection.")
+    graph.add_argument("--json", action="store_true", help="Print structured JSON graph output.")
 
     ingest = subparsers.add_parser(
         "ingest-init",
@@ -71,7 +76,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "search":
         from llm_wiki.search import search_command
 
-        return search_command(repo_root=repo_root, query=args.query, limit=args.limit)
+        return search_command(repo_root=repo_root, query=args.query, limit=args.limit, json_output=args.json)
 
     if args.command == "query":
         from llm_wiki.querying import query_command
@@ -81,6 +86,7 @@ def main(argv: list[str] | None = None) -> int:
             query=args.query,
             limit=args.limit,
             snippets_per_page=args.snippets_per_page,
+            json_output=args.json,
         )
 
     if args.command == "lint":
@@ -91,12 +97,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "status":
         from llm_wiki.status import status_command
 
-        return status_command(repo_root=repo_root)
+        return status_command(repo_root=repo_root, json_output=args.json)
 
     if args.command == "graph":
         from llm_wiki.status import graph_command
 
-        return graph_command(repo_root=repo_root)
+        return graph_command(repo_root=repo_root, json_output=args.json)
 
     if args.command == "ingest-init":
         from llm_wiki.ingest import ingest_init_command
