@@ -110,3 +110,11 @@
 - added `--json` output to `llm-wiki search`
 - added tests for normal search results and empty result payloads
 - added a search JSON source note and expanded the JSON output contract to include search results
+
+## [2026-04-26] tooling | Obsidian Agent Workbench skeleton
+
+- added a read-only Obsidian plugin skeleton under `tools/obsidian-agent-workbench/`
+- implemented an `Agent Workbench` side view for active-page metadata, outbound links, repo health handoffs, and agent handoff commands
+- added plugin settings for `llm-wiki` command and repository root
+- verified `npm run typecheck` and `npm run build`
+- recorded the implementation as a local tooling source note

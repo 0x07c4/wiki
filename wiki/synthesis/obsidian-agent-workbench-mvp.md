@@ -1,8 +1,8 @@
 ---
 page_type: synthesis
 status: active
-last_updated: 2026-04-25
-source_count: 8
+last_updated: 2026-04-26
+source_count: 9
 ---
 
 # Obsidian Agent Workbench MVP
@@ -63,19 +63,34 @@ The panel should be dense and utilitarian. It is a workbench for repeated review
 - Run or prepare read-only search/status/query/graph commands, preferring JSON output for panel rendering.
 - Never write files from the plugin.
 
+## Current Implementation
+
+The first skeleton exists under `tools/obsidian-agent-workbench/`. It implements:
+
+- a desktop-only Obsidian plugin manifest
+- a TypeScript plugin entry point
+- an `Agent Workbench` side view
+- active-page metadata display
+- outbound link display from Obsidian metadata
+- command-copy handoffs for `llm-wiki` JSON workflows
+- settings for `llm-wiki` command and repository root
+
+It remains read-only and copy-only. It does not execute shell commands or write wiki files. [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
+
 ## Open Questions
 
 - Should command execution happen inside Obsidian, or should the plugin only copy shell commands for now?
 - Which JSON fields should be treated as stable plugin API versus internal CLI details?
 - Should review queue data come from `git status`, `wiki/log.md`, or a dedicated agent-generated review file?
 - Would an Obsidian Bases view be better than a custom side panel for dashboards over frontmatter?
-- Should search results include match reasons before the first plugin skeleton?
+- Should search results include match reasons before the first interactive plugin version?
 
 ## Related Pages
 
 - [Obsidian](../entities/obsidian.md)
 - [Local Agent Knowledge Base Operating Model](local-agent-knowledge-base-operating-model.md)
 - [llm-wiki JSON Output Contract](llm-wiki-json-output-contract.md)
+- [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
 - [LLM Wiki](../concepts/llm-wiki.md)
 - [Ingest, Query, Lint](../concepts/ingest-query-lint.md)
 - [Agent Runtime](../concepts/agent-runtime.md)
@@ -90,3 +105,4 @@ The panel should be dense and utilitarian. It is a workbench for repeated review
 - [seed-llm-wiki-pattern.md](../../raw/sources/seed-llm-wiki-pattern.md)
 - [2026-04-25-llm-wiki-json-contract.md](../../raw/sources/tooling/2026-04-25-llm-wiki-json-contract.md)
 - [2026-04-25-llm-wiki-search-json-contract.md](../../raw/sources/tooling/2026-04-25-llm-wiki-search-json-contract.md)
+- [2026-04-26-obsidian-agent-workbench-skeleton.md](../../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-skeleton.md)

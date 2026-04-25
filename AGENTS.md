@@ -50,6 +50,7 @@ These aids are part of the knowledge base's operating surface, not incidental sc
 
 - Obsidian is the human-facing workspace for browsing, built-in graph inspection, clipping, and plugin-based views over the markdown repo
 - `templates/` contains starter structures for source, concept, entity, and synthesis pages
+- `tools/obsidian-agent-workbench/` contains the read-only Obsidian Agent Workbench plugin skeleton
 - `playbooks/ingest-checklist.md` is the default ingest runbook
 - `playbooks/lint-checklist.md` is the default lint runbook
 - `playbooks/notes-to-wiki-checklist.md` is the default runbook for importing selected `~/workspace/notes` entries

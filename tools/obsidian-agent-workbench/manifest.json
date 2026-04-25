@@ -1,0 +1,9 @@
+{
+  "id": "llm-wiki-agent-workbench",
+  "name": "Agent Workbench",
+  "version": "0.0.1",
+  "minAppVersion": "1.7.2",
+  "description": "Read-only workbench for an llm-wiki repository.",
+  "author": "Chikee",
+  "isDesktopOnly": true
+}

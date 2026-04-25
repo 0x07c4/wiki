@@ -1,0 +1,56 @@
+.agent-workbench {
+  padding: 12px;
+  font-size: var(--font-ui-small);
+}
+
+.agent-workbench h2 {
+  margin: 0 0 12px;
+  font-size: var(--font-ui-medium);
+}
+
+.agent-workbench-section {
+  border-top: 1px solid var(--background-modifier-border);
+  padding: 10px 0;
+}
+
+.agent-workbench-section h3 {
+  margin: 0 0 8px;
+  color: var(--text-normal);
+  font-size: var(--font-ui-small);
+  font-weight: 600;
+}
+
+.agent-workbench-kv {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.35fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+  margin: 4px 0;
+}
+
+.agent-workbench-key {
+  color: var(--text-muted);
+}
+
+.agent-workbench-value {
+  color: var(--text-normal);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.agent-workbench-list {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.agent-workbench-muted {
+  margin: 6px 0;
+  color: var(--text-muted);
+}
+
+.agent-workbench-button {
+  display: block;
+  width: 100%;
+  margin: 6px 0;
+  text-align: left;
+}

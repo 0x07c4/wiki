@@ -20,6 +20,7 @@ The goal is not to build a chat app or a passive note archive. The goal is to gi
 - `raw/assets/`: downloaded images or attachments referenced by raw sources
 - `templates/`: starter page templates for future wiki pages
 - `playbooks/`: operational checklists for ingest and lint
+- `tools/obsidian-agent-workbench/`: read-only Obsidian plugin skeleton for the Agent Workbench panel
 - `wiki/overview.md`: the top-level entry point for the maintained wiki
 - `wiki/index.md`: content-oriented catalog of pages
 - `wiki/log.md`: append-only record of ingests, queries, and lint passes
@@ -92,6 +93,8 @@ The current operating model is captured in [Local Agent Knowledge Base Operating
 The first concrete plugin direction is captured in [Obsidian Agent Workbench MVP](wiki/synthesis/obsidian-agent-workbench-mvp.md). Its first version should be read-first: active-page context, repo health, and agent handoff before direct writeback.
 
 The machine-readable CLI contract is captured in [llm-wiki JSON Output Contract](wiki/synthesis/llm-wiki-json-output-contract.md). Tool consumers should prefer `--json` output and treat `schema_version: "1"` as the initial integration contract.
+
+The first plugin skeleton lives in [tools/obsidian-agent-workbench](tools/obsidian-agent-workbench). It is read-only: it displays active-page context and prepares `llm-wiki` command handoffs without writing wiki files.
 
 ## Next expansion
 

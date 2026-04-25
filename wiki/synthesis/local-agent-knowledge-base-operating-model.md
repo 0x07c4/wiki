@@ -1,8 +1,8 @@
 ---
 page_type: synthesis
 status: active
-last_updated: 2026-04-25
-source_count: 7
+last_updated: 2026-04-26
+source_count: 8
 ---
 
 # Local Agent Knowledge Base Operating Model
@@ -35,6 +35,7 @@ Plugins should extend this model only where repeated workflow friction appears. 
 
 - Future agents should start from `wiki/index.md`, then use `llm-wiki search`, `query`, `status`, or `graph` when local structure matters.
 - Tool integrations should prefer JSON output from `llm-wiki search --json`, `llm-wiki status --json`, `llm-wiki graph --json`, and `llm-wiki query --json`, following the [llm-wiki JSON Output Contract](llm-wiki-json-output-contract.md).
+- The first Obsidian integration should stay read-only and handoff-oriented, as implemented by the current plugin skeleton. [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
 - Durable claims should flow from `raw/` into source summaries, then into concept, entity, or synthesis pages.
 - The user should review the maintained layer in Obsidian, especially through overview pages, local graph neighborhoods, backlinks, and open questions.
 - Obsidian plugins are worth considering when they reduce repeated friction in source intake, review, dashboards, presentation, or handoff to agent commands.
@@ -58,6 +59,7 @@ Plugins should extend this model only where repeated workflow friction appears. 
 - [Obsidian](../entities/obsidian.md)
 - [Obsidian Agent Workbench MVP](obsidian-agent-workbench-mvp.md)
 - [llm-wiki JSON Output Contract](llm-wiki-json-output-contract.md)
+- [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
 - [Persistent Wiki vs Ad Hoc RAG](persistent-wiki-vs-ad-hoc-rag.md)
 
 ## Citations
@@ -68,3 +70,5 @@ Plugins should extend this model only where repeated workflow friction appears. 
 - [agent-interaction-formalism.md](../../raw/sources/notes/agent-interaction-formalism.md)
 - [2026-04-25-agent-frontier-scouting.md](../../raw/sources/agent-frontier/2026-04-25-agent-frontier-scouting.md)
 - [2026-04-25-agent-skills-claude-code-cluster.md](../../raw/sources/agent-skills/2026-04-25-agent-skills-claude-code-cluster.md)
+- [2026-04-25-llm-wiki-json-contract.md](../../raw/sources/tooling/2026-04-25-llm-wiki-json-contract.md)
+- [2026-04-26-obsidian-agent-workbench-skeleton.md](../../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-skeleton.md)

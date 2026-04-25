@@ -31,3 +31,7 @@ __pycache__/
 *.pyc
 node_modules/
 .pytest_cache/
+
+# Obsidian plugin build artifacts
+tools/obsidian-agent-workbench/main.js
+tools/obsidian-agent-workbench/*.js.map

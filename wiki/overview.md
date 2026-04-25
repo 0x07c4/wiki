@@ -1,8 +1,8 @@
 ---
 page_type: overview
 status: active
-last_updated: 2026-04-25
-source_count: 8
+last_updated: 2026-04-26
+source_count: 9
 ---
 
 # Overview
@@ -24,6 +24,7 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - agents can use local commands to locate and inspect context before answering
 - the user can use Obsidian's built-in graph views to inspect link structure, then extend the workflow with plugins where needed
 - the first plugin direction is a read-first Obsidian Agent Workbench for active-page context, repo health, and agent handoff
+- a read-only Obsidian Agent Workbench skeleton now exists under `tools/obsidian-agent-workbench/`
 - JSON output from `llm-wiki` now has a versioned contract for tool and plugin consumers
 - upstream notes can remain the user's source of intent while the wiki maintains the structured knowledge layer
 - fast-moving AI agent releases can be collected as source packs before being promoted into stable pages
@@ -61,6 +62,7 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - [Source: Obsidian Plugin Development 2026-04-25](sources/obsidian-plugin-development-2026-04-25.md)
 - [Source: llm-wiki JSON Contract 2026-04-25](sources/llm-wiki-json-contract-2026-04-25.md)
 - [Source: llm-wiki Search JSON Contract 2026-04-25](sources/llm-wiki-search-json-contract-2026-04-25.md)
+- [Source: Obsidian Agent Workbench Skeleton 2026-04-26](sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
 
 ## Open Questions
 
@@ -70,7 +72,7 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - Would a dedicated Obsidian plugin make source intake, review, graph navigation, or agent handoff materially better?
 - Which Obsidian-facing review dashboards would make human-in-the-loop wiki maintenance faster?
 - Which `llm-wiki` JSON fields should become stable API for Obsidian integration?
-- Should search results include matched-field explanations before the first Obsidian workbench build slice?
+- Should search results include matched-field explanations before the first interactive Obsidian workbench version?
 - Which parts of ingest should stay explicitly human-reviewed?
 - Which wiki synthesis pages should eventually be promoted back into `~/workspace/notes`?
 - Which agent frontier sources should be deep-ingested next instead of remaining in source-pack form?
@@ -86,3 +88,4 @@ This wiki can also serve as a compiled layer above upstream personal notes, pres
 - [2026-04-25-obsidian-plugin-development.md](../raw/sources/obsidian/2026-04-25-obsidian-plugin-development.md)
 - [2026-04-25-llm-wiki-json-contract.md](../raw/sources/tooling/2026-04-25-llm-wiki-json-contract.md)
 - [2026-04-25-llm-wiki-search-json-contract.md](../raw/sources/tooling/2026-04-25-llm-wiki-search-json-contract.md)
+- [2026-04-26-obsidian-agent-workbench-skeleton.md](../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-skeleton.md)

@@ -1,8 +1,8 @@
 ---
 page_type: entity
 status: active
-last_updated: 2026-04-25
-source_count: 3
+last_updated: 2026-04-26
+source_count: 4
 ---
 
 # Obsidian
@@ -38,6 +38,8 @@ This repo should avoid assuming one specific plugin is mandatory until a source 
 
 The current concrete direction is a read-first [Obsidian Agent Workbench MVP](../synthesis/obsidian-agent-workbench-mvp.md): active-page context, related wiki links, repo health, and safe agent handoff before direct writeback.
 
+The first skeleton exists under `tools/obsidian-agent-workbench/` and keeps this boundary: it displays context and copies `llm-wiki` commands, but does not write wiki files. [Source: Obsidian Agent Workbench Skeleton 2026-04-26](../sources/obsidian-agent-workbench-skeleton-2026-04-26.md)
+
 ## Relationships
 
 - supports the browsing layer for the [LLM Wiki](../concepts/llm-wiki.md)
@@ -51,3 +53,4 @@ The current concrete direction is a read-first [Obsidian Agent Workbench MVP](..
 - [seed-llm-wiki-pattern.md](../../raw/sources/seed-llm-wiki-pattern.md)
 - [2026-04-25-obsidian-graph-view.md](../../raw/sources/obsidian/2026-04-25-obsidian-graph-view.md)
 - [2026-04-25-obsidian-plugin-development.md](../../raw/sources/obsidian/2026-04-25-obsidian-plugin-development.md)
+- [2026-04-26-obsidian-agent-workbench-skeleton.md](../../raw/sources/tooling/2026-04-26-obsidian-agent-workbench-skeleton.md)
